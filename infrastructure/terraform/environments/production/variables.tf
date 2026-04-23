@@ -5,7 +5,7 @@ variable "subscription_id" {
 
 variable "project" {
   type    = string
-  default = "trophic"
+  default = "zingy"
 }
 
 variable "environment" {
@@ -26,7 +26,7 @@ variable "kubernetes_version" {
 
 variable "db_admin_username" {
   type    = string
-  default = "trophicadmin"
+  default = "zingyadmin"
 }
 
 variable "db_admin_password" {
@@ -42,7 +42,7 @@ variable "auth_secret" {
 
 variable "app_hostname" {
   type    = string
-  default = "app.trophictech.io"
+  default = "app.zingy.io"
 }
 
 variable "alert_email" {

@@ -33,7 +33,7 @@ terraform {
   # 3. Uncomment this block and run:   terraform init -migrate-state
   # ─────────────────────────────────────────────────────────────────────────────
   # backend "azurerm" {
-  #   resource_group_name  = "trophic-tfstate-rg"
+  #   resource_group_name  = "TrophicTechPro"
   #   storage_account_name = "<storage_account_name from bootstrap output>"
   #   container_name       = "tfstate-production"
   #   key                  = "production/terraform.tfstate"
@@ -62,7 +62,7 @@ locals {
     Project     = var.project
     Environment = var.environment
     ManagedBy   = "terraform"
-    Owner       = "platform@trophictech.io"
+    Owner       = "platform@zingy.io"
   }
 }
 

@@ -109,7 +109,7 @@ resource "azurerm_kubernetes_cluster_node_pool" "app" {
   max_count            = var.app_node_max_count
 
   node_labels = {
-    "trophictech.io/pool" = "app"
+    "zingy.io/pool" = "app"
   }
 
   upgrade_settings {

@@ -52,7 +52,7 @@ output "helm_values_snippet" {
   description = "Helm --set flags for staging CI/CD deploy step"
   value = <<-EOT
     image.repository=${module.acr.login_server}/mission-control
-    ingress.host=staging.trophictech.io
-    existingSecret=trophic-mc-secrets
+    ingress.host=staging.zingy.io
+    existingSecret=zingy-mc-secrets
   EOT
 }

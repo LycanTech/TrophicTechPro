@@ -31,7 +31,7 @@ terraform {
   # 3. Uncomment this block and run:   terraform init -migrate-state
   # ─────────────────────────────────────────────────────────────────────────────
   # backend "azurerm" {
-  #   resource_group_name  = "trophic-tfstate-rg"
+  #   resource_group_name  = "TrophicTechPro"
   #   storage_account_name = "<storage_account_name from bootstrap output>"
   #   container_name       = "tfstate-staging"
   #   key                  = "staging/terraform.tfstate"
@@ -54,7 +54,7 @@ locals {
     Project     = var.project
     Environment = var.environment
     ManagedBy   = "terraform"
-    Owner       = "platform@trophictech.io"
+    Owner       = "platform@zingy.io"
   }
 }
 
@@ -148,7 +148,7 @@ module "keyvault" {
   private_endpoint_subnet_id      = module.networking.private_endpoint_subnet_id
   database_connection_string      = module.database.connection_string
   auth_secret                     = var.auth_secret
-  nextauth_url                    = "https://staging.trophictech.io"
+  nextauth_url                    = "https://staging.zingy.io"
   aks_workload_identity_object_id = module.aks.kubelet_identity_object_id
   purge_protection_enabled        = false   # allow staging vault cleanup
   tags                            = local.tags

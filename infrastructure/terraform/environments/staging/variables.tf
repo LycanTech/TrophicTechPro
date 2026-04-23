@@ -5,7 +5,7 @@ variable "subscription_id" {
 
 variable "project" {
   type        = string
-  default     = "trophic"
+  default     = "zingy"
   description = "Project name — used in resource naming and tags"
 }
 
@@ -23,7 +23,7 @@ variable "location" {
 
 variable "db_admin_username" {
   type        = string
-  default     = "trophicadmin"
+  default     = "zingyadmin"
   description = "PostgreSQL administrator username"
 }
 

@@ -30,7 +30,7 @@ variable "storage_tier" {
 
 variable "database_name" {
   type    = string
-  default = "trophic_mc"
+  default = "zingy_mc"
 }
 
 variable "ha_enabled" {

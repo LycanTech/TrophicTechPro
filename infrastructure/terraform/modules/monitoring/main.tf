@@ -40,7 +40,7 @@ resource "azurerm_log_analytics_solution" "container_insights" {
 resource "azurerm_monitor_action_group" "ops" {
   name                = "${var.name_prefix}-ag-ops"
   resource_group_name = var.resource_group_name
-  short_name          = "trophic-ops"
+  short_name          = "zingy-ops"
 
   dynamic "email_receiver" {
     for_each = var.alert_email != "" ? [var.alert_email] : []

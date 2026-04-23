@@ -6,7 +6,7 @@
 #   - VNet-injected private access (no public endpoint)
 #   - Private DNS zone  (*.postgres.database.azure.com) linked to the VNet
 #   - Hardened parameter configuration (SSL enforced, TLS 1.2+, connection throttle)
-#   - The application database (trophic_mc by default)
+#   - The application database (zingy_mc by default)
 #
 # The Prisma connection string is exposed as a sensitive output for Key Vault ingestion.
 
