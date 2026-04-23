@@ -1,0 +1,12 @@
+subscription_id   = "00000000-0000-0000-0000-000000000000"
+
+project           = "trophic"
+environment       = "staging"
+location          = "eastus2"
+
+db_admin_username = "trophicadmin"
+db_admin_password = "CHANGE_ME"
+
+auth_secret       = "CHANGE_ME_openssl_rand_base64_32"
+
+alert_email       = "platform@trophictech.io"

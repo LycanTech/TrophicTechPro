@@ -1,0 +1,62 @@
+version: "3.9"
+
+services:
+  # ── PostgreSQL ───────────────────────────────────────────
+  postgres:
+    image: postgres:16-alpine
+    container_name: trophic-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER:     trophic
+      POSTGRES_PASSWORD: trophic_dev
+      POSTGRES_DB:       trophic_mc
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U trophic -d trophic_mc"]
+      interval: 10s
+      timeout:  5s
+      retries:  5
+
+  # ── Next.js App ──────────────────────────────────────────
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: runner
+    container_name: trophic-app
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      DATABASE_URL:  postgresql://trophic:trophic_dev@postgres:5432/trophic_mc
+      AUTH_SECRET:   local-dev-secret-change-in-production
+      NEXTAUTH_URL:  http://localhost:3000
+      NODE_ENV:      production
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  # ── DB migration + seed (one-shot) ───────────────────────
+  migrate:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: deps
+    container_name: trophic-migrate
+    command: >
+      sh -c "
+        npx prisma migrate deploy &&
+        npm run db:seed
+      "
+    environment:
+      DATABASE_URL: postgresql://trophic:trophic_dev@postgres:5432/trophic_mc
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: "no"
+
+volumes:
+  postgres_data:

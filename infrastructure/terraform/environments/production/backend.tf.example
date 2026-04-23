@@ -1,0 +1,29 @@
+# One-time setup — run these Azure CLI commands BEFORE terraform init:
+#
+#   az group create \
+#     --name trophic-tfstate-rg \
+#     --location eastus2
+#
+#   az storage account create \
+#     --name trophictfstate \
+#     --resource-group trophic-tfstate-rg \
+#     --sku Standard_LRS \
+#     --min-tls-version TLS1_2 \
+#     --allow-blob-public-access false
+#
+#   az storage container create \
+#     --name tfstate \
+#     --account-name trophictfstate
+#
+# Then rename this file to backend.tf and uncomment the block below.
+# The storage account acts as the Terraform lock + state store.
+
+# terraform {
+#   backend "azurerm" {
+#     resource_group_name  = "trophic-tfstate-rg"
+#     storage_account_name = "trophictfstate"
+#     container_name       = "tfstate"
+#     key                  = "production/terraform.tfstate"
+#     use_azuread_auth     = true   # OIDC/managed-identity auth — no storage keys needed
+#   }
+# }

@@ -1,0 +1,13 @@
+apiVersion: v2
+name: trophic-mission-control
+description: Trophic Tech Mission Control — Next.js DevOps platform on AKS
+type: application
+version: 1.0.0
+appVersion: "1.0.0"
+maintainers:
+  - name: Trophic Tech Platform Team
+    email: platform@trophictech.io
+keywords:
+  - nextjs
+  - devops
+  - trophic-tech
