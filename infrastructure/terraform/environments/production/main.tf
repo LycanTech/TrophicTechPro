@@ -27,16 +27,15 @@ terraform {
   }
   required_version = ">= 1.9.0"
 
-  # Remote state — Azure Blob Storage.
-  # Uncomment and populate after running:
-  #   az group create -n trophic-tfstate-rg -l eastus2
-  #   az storage account create -n trophictfstate -g trophic-tfstate-rg --sku Standard_LRS
-  #   az storage container create -n tfstate --account-name trophictfstate
-  #
+  # ── Remote backend ──────────────────────────────────────────────────────────
+  # 1. Run the bootstrap module once:  cd infrastructure/terraform/bootstrap && terraform apply
+  # 2. Copy the `storage_account_name` output value into storage_account_name below.
+  # 3. Uncomment this block and run:   terraform init -migrate-state
+  # ─────────────────────────────────────────────────────────────────────────────
   # backend "azurerm" {
   #   resource_group_name  = "trophic-tfstate-rg"
-  #   storage_account_name = "trophictfstate"
-  #   container_name       = "tfstate"
+  #   storage_account_name = "<storage_account_name from bootstrap output>"
+  #   container_name       = "tfstate-production"
   #   key                  = "production/terraform.tfstate"
   # }
 }

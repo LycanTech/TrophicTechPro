@@ -25,10 +25,15 @@ terraform {
   }
   required_version = ">= 1.9.0"
 
+  # ── Remote backend ──────────────────────────────────────────────────────────
+  # 1. Run the bootstrap module once:  cd infrastructure/terraform/bootstrap && terraform apply
+  # 2. Copy the `storage_account_name` output value into storage_account_name below.
+  # 3. Uncomment this block and run:   terraform init -migrate-state
+  # ─────────────────────────────────────────────────────────────────────────────
   # backend "azurerm" {
   #   resource_group_name  = "trophic-tfstate-rg"
-  #   storage_account_name = "trophictfstate"
-  #   container_name       = "tfstate"
+  #   storage_account_name = "<storage_account_name from bootstrap output>"
+  #   container_name       = "tfstate-staging"
   #   key                  = "staging/terraform.tfstate"
   # }
 }
@@ -84,14 +89,16 @@ module "networking" {
 module "acr" {
   source = "../../modules/acr"
 
-  name_prefix                = local.name_prefix
-  location                   = azurerm_resource_group.main.location
-  resource_group_name        = azurerm_resource_group.main.name
-  vnet_id                    = module.networking.vnet_id
-  private_endpoint_subnet_id = module.networking.private_endpoint_subnet_id
-  sku                        = "Basic"   # private endpoint not available on Basic — switch to Standard if needed
-  log_analytics_workspace_id = module.monitoring.log_analytics_workspace_id
-  tags                       = local.tags
+  name_prefix                   = local.name_prefix
+  location                      = azurerm_resource_group.main.location
+  resource_group_name           = azurerm_resource_group.main.name
+  vnet_id                       = module.networking.vnet_id
+  private_endpoint_subnet_id    = module.networking.private_endpoint_subnet_id
+  sku                           = "Standard"              # Basic does not support private endpoints
+  enable_private_endpoint       = false                   # cost saving — staging uses public access
+  public_network_access_enabled = true                    # required when private endpoint is disabled
+  log_analytics_workspace_id    = module.monitoring.log_analytics_workspace_id
+  tags                          = local.tags
 }
 
 module "database" {
@@ -154,11 +161,3 @@ resource "azurerm_role_assignment" "aks_acr_pull" {
   skip_service_principal_aad_check = true
 }
 
-variable "subscription_id" { type = string }
-variable "project"         { type = string; default = "trophic" }
-variable "environment"     { type = string; default = "staging" }
-variable "location"        { type = string; default = "eastus2" }
-variable "db_admin_username" { type = string; default = "trophicadmin" }
-variable "db_admin_password" { type = string; sensitive = true }
-variable "auth_secret"       { type = string; sensitive = true }
-variable "alert_email"       { type = string; default = "" }

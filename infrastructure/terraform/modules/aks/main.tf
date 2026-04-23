@@ -137,8 +137,4 @@ resource "azurerm_monitor_diagnostic_setting" "aks" {
   enabled_log { category = "kube-controller-manager" }
   enabled_log { category = "kube-scheduler" }
   enabled_log { category = "guard" }
-
-  metric {
-    category = "AllMetrics"
-  }
 }

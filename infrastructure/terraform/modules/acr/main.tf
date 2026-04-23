@@ -1,21 +1,20 @@
-# ─── ACR Module ─────────────────────────────────────────────────────────────────
+# ─── ACR Module ──────────────────────────────────────────────────────────────
 #
 # Provisions:
-#   - Azure Container Registry (Premium — enables private endpoint + geo-replication)
-#   - Private endpoint in the private-endpoints subnet (no public registry access)
-#   - Private DNS zone  (privatelink.azurecr.io) linked to the VNet
-#   - Optional geo-replication to a secondary region
+#   - Azure Container Registry
+#   - Private endpoint + DNS zone (conditional — requires Standard or Premium SKU)
+#   - Optional geo-replication (Premium only)
 #
-# Note: Admin access is disabled. AKS pulls images using its kubelet managed
-# identity (AcrPull role assigned in the root environment module).
+# Admin access is always disabled. AKS pulls images via kubelet managed identity
+# (AcrPull role assigned in the root environment module).
 
 resource "azurerm_container_registry" "main" {
-  name                          = "${replace(var.name_prefix, "-", "")}acr"   # ACR names: alphanumeric only
+  name                          = "${replace(var.name_prefix, "-", "")}acr"
   resource_group_name           = var.resource_group_name
   location                      = var.location
   sku                           = var.sku
-  admin_enabled                 = false   # kubelet identity pulls via AcrPull role; no admin creds needed
-  public_network_access_enabled = false   # all traffic flows through private endpoint
+  admin_enabled                 = false
+  public_network_access_enabled = var.public_network_access_enabled
 
   dynamic "georeplications" {
     for_each = var.georeplication_locations
@@ -27,29 +26,36 @@ resource "azurerm_container_registry" "main" {
   }
 
   network_rule_bypass_option = "AzureServices"
-
-  tags = var.tags
+  tags                       = var.tags
 }
 
-# ─── Private DNS zone ──────────────────────────────────────────────────────────
-# Resolves <registry>.azurecr.io to the private endpoint IP inside the VNet.
+# ─── Private DNS zone ────────────────────────────────────────────────────────
+# Only created when private endpoint is enabled (Standard or Premium SKU).
+
 resource "azurerm_private_dns_zone" "acr" {
+  count = var.enable_private_endpoint ? 1 : 0
+
   name                = "privatelink.azurecr.io"
   resource_group_name = var.resource_group_name
   tags                = var.tags
 }
 
 resource "azurerm_private_dns_zone_virtual_network_link" "acr" {
+  count = var.enable_private_endpoint ? 1 : 0
+
   name                  = "${var.name_prefix}-acr-dns-link"
   resource_group_name   = var.resource_group_name
-  private_dns_zone_name = azurerm_private_dns_zone.acr.name
+  private_dns_zone_name = azurerm_private_dns_zone.acr[0].name
   virtual_network_id    = var.vnet_id
   registration_enabled  = false
   tags                  = var.tags
 }
 
-# ─── Private endpoint ──────────────────────────────────────────────────────────
+# ─── Private endpoint ────────────────────────────────────────────────────────
+
 resource "azurerm_private_endpoint" "acr" {
+  count = var.enable_private_endpoint ? 1 : 0
+
   name                = "${var.name_prefix}-pe-acr"
   location            = var.location
   resource_group_name = var.resource_group_name
@@ -64,13 +70,14 @@ resource "azurerm_private_endpoint" "acr" {
 
   private_dns_zone_group {
     name                 = "acr-dns-zone-group"
-    private_dns_zone_ids = [azurerm_private_dns_zone.acr.id]
+    private_dns_zone_ids = [azurerm_private_dns_zone.acr[0].id]
   }
 
   tags = var.tags
 }
 
-# ─── Diagnostic settings — push registry metrics to Log Analytics ─────────────
+# ─── Diagnostic settings ─────────────────────────────────────────────────────
+
 resource "azurerm_monitor_diagnostic_setting" "acr" {
   count = var.log_analytics_workspace_id != "" ? 1 : 0
 
@@ -80,8 +87,4 @@ resource "azurerm_monitor_diagnostic_setting" "acr" {
 
   enabled_log { category = "ContainerRegistryRepositoryEvents" }
   enabled_log { category = "ContainerRegistryLoginEvents" }
-
-  metric {
-    category = "AllMetrics"
-  }
 }

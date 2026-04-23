@@ -129,8 +129,4 @@ resource "azurerm_monitor_diagnostic_setting" "postgres" {
   log_analytics_workspace_id = var.log_analytics_workspace_id
 
   enabled_log { category = "PostgreSQLLogs" }
-
-  metric {
-    category = "AllMetrics"
-  }
 }
