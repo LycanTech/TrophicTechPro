@@ -1,0 +1,393 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# Trophic Tech Mission Control — Azure DevOps CI/CD Pipeline
+# ─────────────────────────────────────────────────────────────────────────────
+#
+# SETUP CHECKLIST
+# ───────────────
+# 1. Library → Variable Groups → create "trophic-mc-vars" with:
+#      ACR_NAME                  ACR instance name, e.g. trophictech
+#      ACR_SERVICE_CONNECTION    Docker Registry service connection to ACR
+#      AZURE_SERVICE_CONNECTION  Azure Resource Manager service connection
+#      AKS_RESOURCE_GROUP        Resource group containing the AKS cluster
+#      AKS_CLUSTER               AKS cluster name
+#
+# 2. Pipelines → Environments → create:
+#      trophic-staging     (no approval needed)
+#      trophic-production  (add Manual Approval check + required reviewer)
+#
+# 3. Service Connections (Project Settings → Service connections):
+#      Docker Registry → Azure Container Registry  (name matches ACR_SERVICE_CONNECTION)
+#      Azure Resource Manager → Subscription scope (name matches AZURE_SERVICE_CONNECTION)
+# ─────────────────────────────────────────────────────────────────────────────
+
+trigger:
+  branches:
+    include:
+      - main
+      - develop
+  paths:
+    exclude:
+      - README.md
+      - docs/**
+      - '*.md'
+
+pr:
+  branches:
+    include:
+      - main
+
+variables:
+  - group: trophic-mc-vars
+  - name: IMAGE_REPO
+    value: 'mission-control'
+  - name: IMAGE_TAG
+    value: '$(Build.BuildId)'
+  - name: HELM_CHART
+    value: './helm/app'
+  - name: HELM_RELEASE
+    value: 'trophic-mc'
+  - name: STAGING_NS
+    value: 'staging'
+  - name: PROD_NS
+    value: 'production'
+
+# ─────────────────────────────────────────────────────────────────────────────
+# STAGE 1 — CI: Lint · Unit tests · Security scan
+# ─────────────────────────────────────────────────────────────────────────────
+stages:
+- stage: CI
+  displayName: 'CI — Lint, Test & Security'
+
+  jobs:
+  # ── Lint ────────────────────────────────────────────────────────────────
+  - job: Lint
+    displayName: 'ESLint'
+    pool:
+      vmImage: ubuntu-latest
+    steps:
+    - task: NodeTool@0
+      displayName: 'Use Node 22'
+      inputs:
+        versionSpec: '22.x'
+
+    - script: npm ci
+      displayName: 'Install dependencies'
+
+    - script: npm run lint
+      displayName: 'ESLint'
+
+  # ── Unit tests ──────────────────────────────────────────────────────────
+  - job: UnitTests
+    displayName: 'Jest + Coverage'
+    pool:
+      vmImage: ubuntu-latest
+    steps:
+    - task: NodeTool@0
+      displayName: 'Use Node 22'
+      inputs:
+        versionSpec: '22.x'
+
+    - script: |
+        docker run -d --name test-postgres \
+          -e POSTGRES_USER=trophic \
+          -e POSTGRES_PASSWORD=trophic_test \
+          -e POSTGRES_DB=trophic_test \
+          -p 5432:5432 \
+          postgres:16-alpine
+        echo "Waiting for PostgreSQL to be ready..."
+        for i in $(seq 1 30); do
+          docker exec test-postgres pg_isready -U trophic -d trophic_test \
+            && echo "PostgreSQL ready" && break
+          sleep 2
+        done
+      displayName: 'Start PostgreSQL service'
+
+    - script: npm ci
+      displayName: 'Install dependencies'
+
+    - script: npm run test:coverage
+      displayName: 'Run Jest with coverage'
+      env:
+        DATABASE_URL:  'postgresql://trophic:trophic_test@localhost:5432/trophic_test'
+        AUTH_SECRET:   'ci-test-secret-not-used-in-prod'
+        NEXTAUTH_URL:  'http://localhost:3000'
+
+  # ── Security scan ───────────────────────────────────────────────────────
+  - job: SecurityScan
+    displayName: 'Trivy — filesystem scan'
+    pool:
+      vmImage: ubuntu-latest
+    steps:
+    - script: |
+        curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh \
+          | sh -s -- -b /usr/local/bin
+        trivy fs . \
+          --scanners secret,vuln \
+          --severity HIGH,CRITICAL \
+          --exit-code 1 \
+          --format table
+      displayName: 'Trivy — scan source for secrets & vulns'
+
+# ─────────────────────────────────────────────────────────────────────────────
+# STAGE 2 — BUILD: Docker build → Trivy image scan → push to ACR
+# ─────────────────────────────────────────────────────────────────────────────
+- stage: Build
+  displayName: 'Build & Push → ACR'
+  dependsOn: CI
+  condition: and(succeeded(), ne(variables['Build.Reason'], 'PullRequest'))
+
+  jobs:
+  - job: BuildAndPush
+    displayName: 'Build image · scan · push to ACR'
+    pool:
+      vmImage: ubuntu-latest
+    steps:
+
+    - task: Docker@2
+      displayName: 'Build Docker image (runner stage)'
+      inputs:
+        command: build
+        containerRegistry: '$(ACR_SERVICE_CONNECTION)'
+        repository: '$(IMAGE_REPO)'
+        dockerfile: 'Dockerfile'
+        buildContext: '.'
+        arguments: '--target runner'
+        tags: |
+          $(IMAGE_TAG)
+          latest
+
+    - script: |
+        curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh \
+          | sh -s -- -b /usr/local/bin
+        trivy image \
+          $(ACR_NAME).azurecr.io/$(IMAGE_REPO):$(IMAGE_TAG) \
+          --severity HIGH,CRITICAL \
+          --exit-code 1 \
+          --format table
+      displayName: 'Trivy — scan container image'
+
+    - task: Docker@2
+      displayName: 'Push image to ACR'
+      inputs:
+        command: push
+        containerRegistry: '$(ACR_SERVICE_CONNECTION)'
+        repository: '$(IMAGE_REPO)'
+        tags: |
+          $(IMAGE_TAG)
+          latest
+
+    - bash: |
+        echo "##vso[build.addbuildtag]$(IMAGE_TAG)"
+        echo "Pushed: $(ACR_NAME).azurecr.io/$(IMAGE_REPO):$(IMAGE_TAG)"
+      displayName: 'Tag build with image reference'
+
+# ─────────────────────────────────────────────────────────────────────────────
+# STAGE 3 — STAGING: Helm upgrade → DB migrate → smoke test
+# ─────────────────────────────────────────────────────────────────────────────
+- stage: DeployStaging
+  displayName: 'Deploy → Staging'
+  dependsOn: Build
+  condition: >
+    and(
+      succeeded(),
+      in(variables['Build.SourceBranch'], 'refs/heads/main', 'refs/heads/develop')
+    )
+
+  jobs:
+  - deployment: Staging
+    displayName: 'Helm deploy to staging'
+    pool:
+      vmImage: ubuntu-latest
+    environment: 'trophic-staging'
+    strategy:
+      runOnce:
+        deploy:
+          steps:
+
+          - task: AzureCLI@2
+            displayName: 'Helm upgrade — staging namespace'
+            inputs:
+              azureSubscription: '$(AZURE_SERVICE_CONNECTION)'
+              scriptType: bash
+              scriptLocation: inlineScript
+              inlineScript: |
+                az aks get-credentials \
+                  --resource-group $(AKS_RESOURCE_GROUP) \
+                  --name $(AKS_CLUSTER) \
+                  --overwrite-existing
+
+                which helm || curl https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash
+
+                helm upgrade --install $(HELM_RELEASE) $(HELM_CHART) \
+                  --namespace $(STAGING_NS) \
+                  --create-namespace \
+                  --set image.repository=$(ACR_NAME).azurecr.io/$(IMAGE_REPO) \
+                  --set image.tag=$(IMAGE_TAG) \
+                  --set env=staging \
+                  --set replicaCount=2 \
+                  --atomic \
+                  --timeout 5m \
+                  --wait
+
+          - task: AzureCLI@2
+            displayName: 'Run DB migrations (prisma migrate deploy)'
+            inputs:
+              azureSubscription: '$(AZURE_SERVICE_CONNECTION)'
+              scriptType: bash
+              scriptLocation: inlineScript
+              inlineScript: |
+                az aks get-credentials \
+                  --resource-group $(AKS_RESOURCE_GROUP) \
+                  --name $(AKS_CLUSTER) --overwrite-existing
+
+                kubectl run migrate-$(IMAGE_TAG) \
+                  --image=$(ACR_NAME).azurecr.io/$(IMAGE_REPO):$(IMAGE_TAG) \
+                  --restart=Never \
+                  --namespace=$(STAGING_NS) \
+                  --env-from=secret/trophic-mc-secrets \
+                  --command -- sh -c "npx prisma migrate deploy"
+
+                kubectl wait pod/migrate-$(IMAGE_TAG) \
+                  --for=condition=succeeded \
+                  --namespace=$(STAGING_NS) \
+                  --timeout=120s
+
+                kubectl delete pod migrate-$(IMAGE_TAG) \
+                  --namespace=$(STAGING_NS) --ignore-not-found
+
+          - task: AzureCLI@2
+            displayName: 'Smoke test — GET /api/health'
+            inputs:
+              azureSubscription: '$(AZURE_SERVICE_CONNECTION)'
+              scriptType: bash
+              scriptLocation: inlineScript
+              inlineScript: |
+                az aks get-credentials \
+                  --resource-group $(AKS_RESOURCE_GROUP) \
+                  --name $(AKS_CLUSTER) --overwrite-existing
+
+                echo "Port-forwarding to staging service..."
+                kubectl port-forward svc/$(HELM_RELEASE) 8080:80 \
+                  -n $(STAGING_NS) &
+                PF_PID=$!
+                sleep 6
+
+                for i in $(seq 1 12); do
+                  STATUS=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:8080/api/health || echo "000")
+                  echo "Attempt $i: HTTP $STATUS"
+                  if [ "$STATUS" = "200" ]; then
+                    echo "✓ Health check passed"
+                    kill $PF_PID
+                    exit 0
+                  fi
+                  sleep 5
+                done
+
+                kill $PF_PID
+                echo "✗ Health check failed after 12 attempts"
+                exit 1
+
+# ─────────────────────────────────────────────────────────────────────────────
+# STAGE 4 — PRODUCTION: Manual approval → canary 20% → soak → full rollout
+# ─────────────────────────────────────────────────────────────────────────────
+- stage: DeployProduction
+  displayName: 'Deploy → Production'
+  dependsOn: DeployStaging
+  condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/main'))
+
+  jobs:
+  - deployment: Production
+    displayName: 'Canary → full rollout → production'
+    pool:
+      vmImage: ubuntu-latest
+    environment: 'trophic-production'   # Manual approval gate configured in Environments UI
+    strategy:
+      runOnce:
+        deploy:
+          steps:
+
+          - task: AzureCLI@2
+            displayName: 'Canary deploy — 20% traffic, 90s soak'
+            inputs:
+              azureSubscription: '$(AZURE_SERVICE_CONNECTION)'
+              scriptType: bash
+              scriptLocation: inlineScript
+              inlineScript: |
+                az aks get-credentials \
+                  --resource-group $(AKS_RESOURCE_GROUP) \
+                  --name $(AKS_CLUSTER) --overwrite-existing
+
+                which helm || curl https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash
+
+                helm upgrade --install $(HELM_RELEASE)-canary $(HELM_CHART) \
+                  --namespace $(PROD_NS) --create-namespace \
+                  --set image.repository=$(ACR_NAME).azurecr.io/$(IMAGE_REPO) \
+                  --set image.tag=$(IMAGE_TAG) \
+                  --set replicaCount=1 \
+                  --set ingress.canary.enabled=true \
+                  --set ingress.canary.weight=20 \
+                  --atomic --timeout 5m
+
+                echo "Canary live with 20% traffic — soaking for 90s..."
+                sleep 90
+                echo "Soak complete"
+
+          - task: AzureCLI@2
+            displayName: 'Full rollout → production'
+            inputs:
+              azureSubscription: '$(AZURE_SERVICE_CONNECTION)'
+              scriptType: bash
+              scriptLocation: inlineScript
+              inlineScript: |
+                az aks get-credentials \
+                  --resource-group $(AKS_RESOURCE_GROUP) \
+                  --name $(AKS_CLUSTER) --overwrite-existing
+
+                which helm || curl https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash
+
+                if ! helm upgrade --install $(HELM_RELEASE) $(HELM_CHART) \
+                  --namespace $(PROD_NS) \
+                  --set image.repository=$(ACR_NAME).azurecr.io/$(IMAGE_REPO) \
+                  --set image.tag=$(IMAGE_TAG) \
+                  --set ingress.canary.enabled=false \
+                  --atomic --timeout 8m --wait; then
+                    echo "Rollout failed — rolling back"
+                    helm rollback $(HELM_RELEASE) --namespace $(PROD_NS)
+                    exit 1
+                fi
+
+                # Remove canary release
+                helm uninstall $(HELM_RELEASE)-canary \
+                  --namespace $(PROD_NS) 2>/dev/null || true
+
+                echo "✓ Production deployment complete"
+                echo "  Image: $(ACR_NAME).azurecr.io/$(IMAGE_REPO):$(IMAGE_TAG)"
+                echo "  Build: $(Build.BuildId)"
+
+          - task: AzureCLI@2
+            displayName: 'Run DB migrations — production'
+            inputs:
+              azureSubscription: '$(AZURE_SERVICE_CONNECTION)'
+              scriptType: bash
+              scriptLocation: inlineScript
+              inlineScript: |
+                az aks get-credentials \
+                  --resource-group $(AKS_RESOURCE_GROUP) \
+                  --name $(AKS_CLUSTER) --overwrite-existing
+
+                kubectl run migrate-prod-$(IMAGE_TAG) \
+                  --image=$(ACR_NAME).azurecr.io/$(IMAGE_REPO):$(IMAGE_TAG) \
+                  --restart=Never \
+                  --namespace=$(PROD_NS) \
+                  --env-from=secret/trophic-mc-secrets \
+                  --command -- sh -c "npx prisma migrate deploy"
+
+                kubectl wait pod/migrate-prod-$(IMAGE_TAG) \
+                  --for=condition=succeeded \
+                  --namespace=$(PROD_NS) \
+                  --timeout=120s
+
+                kubectl delete pod migrate-prod-$(IMAGE_TAG) \
+                  --namespace=$(PROD_NS) --ignore-not-found
+
+                echo "✓ Migrations applied successfully"

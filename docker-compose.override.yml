@@ -1,0 +1,36 @@
+# docker-compose.override.yml
+# ─────────────────────────────────────────────────────────────────────────────
+# LOCAL DEVELOPMENT HOT-RELOAD OVERRIDE
+# Applied automatically by `docker compose up` — do NOT use in CI/CD.
+#
+# What this does:
+#   - Runs the app with `npm run dev` (Fast Refresh) instead of `node server.js`
+#   - Mounts your source code so edits reflect instantly without rebuilding
+#   - Sets NODE_ENV=development
+# ─────────────────────────────────────────────────────────────────────────────
+
+services:
+
+  # ── Next.js app (dev mode) ─────────────────────────────────────────────────
+  app:
+    build:
+      target: deps           # Only install stage — skip the production build
+    command: npm run dev
+    volumes:
+      - .:/app               # Mount source for hot reload
+      - /app/node_modules    # Anonymous volume — keep container's node_modules
+      - /app/.next           # Anonymous volume — keep .next build cache
+    environment:
+      NODE_ENV: development
+      NEXTAUTH_URL: http://localhost:3000
+      WATCHPACK_POLLING: "true"   # Required for file-watch on Windows/WSL2
+    ports:
+      - "3000:3000"
+
+  # ── Migration runner (dev) ─────────────────────────────────────────────────
+  migrate:
+    build:
+      target: deps
+    volumes:
+      - .:/app
+      - /app/node_modules
