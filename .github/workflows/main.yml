@@ -163,10 +163,12 @@ jobs:
             network=host
 
       - name: Log in to Azure Container Registry
+        if: env.ACR_REGISTRY != ''
         run: az acr login --name ${{ env.ACR_REGISTRY }}
 
       - name: Extract Docker metadata (tags & labels)
         id: meta
+        if: env.ACR_REGISTRY != ''
         uses: docker/metadata-action@v5
         with:
           images: ${{ env.ACR_REGISTRY }}/${{ env.ACR_REPOSITORY }}
@@ -179,6 +181,7 @@ jobs:
 
       - name: Build and push image to ACR
         id: build
+        if: env.ACR_REGISTRY != ''
         uses: docker/build-push-action@v5
         with:
           context: .
@@ -192,6 +195,7 @@ jobs:
           sbom: true
 
       - name: Scan Docker image for vulnerabilities (Trivy)
+        if: env.ACR_REGISTRY != ''
         uses: aquasecurity/trivy-action@master
         with:
           image-ref: ${{ env.ACR_REGISTRY }}/${{ env.ACR_REPOSITORY }}:sha-${{ github.sha }}
@@ -202,7 +206,7 @@ jobs:
 
       - name: Upload image scan SARIF
         uses: github/codeql-action/upload-sarif@v4
-        if: always() && hashFiles('trivy-image.sarif') != ''
+        if: always() && env.ACR_REGISTRY != '' && hashFiles('trivy-image.sarif') != ''
         with:
           sarif_file: trivy-image.sarif
           category: trivy-image
