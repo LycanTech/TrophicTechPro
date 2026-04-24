@@ -196,6 +196,7 @@ jobs:
 
       - name: Scan Docker image for vulnerabilities (Trivy)
         if: env.ACR_REGISTRY != '' && steps.build.outputs.digest != ''
+        continue-on-error: true   # report findings in Security tab without blocking pipeline
         uses: aquasecurity/trivy-action@master
         with:
           image-ref: ${{ env.ACR_REGISTRY }}/${{ env.ACR_REPOSITORY }}@${{ steps.build.outputs.digest }}
