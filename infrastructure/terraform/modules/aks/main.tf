@@ -9,6 +9,8 @@
 #   - OMS agent → Log Analytics (Container Insights)
 #   - Diagnostic settings for API server, audit, controller manager, scheduler logs
 
+data "azurerm_client_config" "current" {}
+
 resource "azurerm_kubernetes_cluster" "main" {
   name                = "${var.name_prefix}-aks"
   location            = var.location
@@ -65,9 +67,10 @@ resource "azurerm_kubernetes_cluster" "main" {
     msi_auth_for_monitoring_enabled = true
   }
 
-  # ── Azure AD RBAC (Kubernetes RBAC backed by Azure AD groups) ─────────────────
+  # ── Azure AD RBAC (Kubernetes RBAC backed by Azure AD) ────────────────────────
   azure_active_directory_role_based_access_control {
     azure_rbac_enabled = true
+    tenant_id          = data.azurerm_client_config.current.tenant_id
   }
 
   # ── Private cluster (optional — enable in production for zero public API exposure) ─

@@ -152,7 +152,7 @@ resource "azurerm_monitor_metric_alert" "pg_cpu_high" {
   description         = "PostgreSQL CPU above 80% — query optimisation or scale-up needed"
   severity            = 2
   frequency           = "PT5M"
-  window_size         = "PT10M"
+  window_size         = "PT15M"
 
   criteria {
     metric_namespace = "Microsoft.DBforPostgreSQL/flexibleServers"
