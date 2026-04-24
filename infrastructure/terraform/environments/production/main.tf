@@ -57,7 +57,7 @@ locals {
     Project     = var.project
     Environment = var.environment
     ManagedBy   = "terraform"
-    Owner       = "platform@zingy.io"
+    Owner       = "platform@trophictech.io"
   }
 }
 

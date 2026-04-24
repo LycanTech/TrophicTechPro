@@ -49,7 +49,7 @@ locals {
     Project     = var.project
     Environment = var.environment
     ManagedBy   = "terraform"
-    Owner       = "platform@zingy.io"
+    Owner       = "platform@trophictech.io"
   }
 }
 
@@ -145,7 +145,7 @@ module "keyvault" {
   private_endpoint_subnet_id      = module.networking.private_endpoint_subnet_id
   database_connection_string      = module.database.connection_string
   auth_secret                     = var.auth_secret
-  nextauth_url                    = "https://staging.zingy.io"
+  nextauth_url                    = "https://staging.trophictech.io"
   # Populated in a second apply after AKS is provisioned
   aks_workload_identity_object_id = ""
   purge_protection_enabled        = false   # allow staging vault cleanup
