@@ -395,6 +395,7 @@ jobs:
 
       - name: Notify deployment success
         if: success()
+        continue-on-error: true
         uses: slackapi/slack-github-action@v1.26.0
         with:
           payload: |
@@ -406,6 +407,7 @@ jobs:
 
       - name: Notify deployment failure
         if: failure()
+        continue-on-error: true
         uses: slackapi/slack-github-action@v1.26.0
         with:
           payload: |
