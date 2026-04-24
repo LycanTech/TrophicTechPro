@@ -67,8 +67,10 @@ module "monitoring" {
   resource_group_name   = azurerm_resource_group.main.name
   log_retention_in_days = 30
   alert_email           = var.alert_email
-  aks_cluster_id        = module.aks.cluster_id
-  postgresql_server_id  = module.database.postgresql_id
+  # IDs are empty on first apply — alerts are skipped (count = 0).
+  # Run a second apply after AKS/DB are up to enable metric alerts.
+  aks_cluster_id        = ""
+  postgresql_server_id  = ""
   tags                  = local.tags
 }
 
