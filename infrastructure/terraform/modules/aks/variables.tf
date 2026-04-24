@@ -7,7 +7,7 @@ variable "log_analytics_workspace_id" { type = string }
 
 variable "kubernetes_version" {
   type    = string
-  default = "1.32"
+  default = null   # null → Azure picks the current stable default
 }
 
 variable "system_node_count" {

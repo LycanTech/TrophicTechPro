@@ -21,12 +21,11 @@ resource "azurerm_key_vault" "main" {
   soft_delete_retention_days = var.soft_delete_retention_days
   purge_protection_enabled   = var.purge_protection_enabled
 
-  # Disallow all public traffic — secrets only reachable through private endpoint
-  public_network_access_enabled = false
+  public_network_access_enabled = var.public_network_access_enabled
 
   network_acls {
     bypass         = "AzureServices"
-    default_action = "Deny"
+    default_action = var.public_network_access_enabled ? "Allow" : "Deny"
     ip_rules       = []
   }
 

@@ -149,6 +149,7 @@ module "keyvault" {
   # Populated in a second apply after AKS is provisioned
   aks_workload_identity_object_id = ""
   purge_protection_enabled        = false   # allow staging vault cleanup
+  public_network_access_enabled   = true    # CI runners are on public IPs — must reach vault
   tags                            = local.tags
 }
 
