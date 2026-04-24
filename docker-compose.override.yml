@@ -23,10 +23,10 @@ services:
       - /app/.next           # Anonymous volume — keep .next build cache
     environment:
       NODE_ENV: development
-      NEXTAUTH_URL: http://localhost:3000
+      NEXTAUTH_URL: http://localhost:3001
       WATCHPACK_POLLING: "true"   # Required for file-watch on Windows/WSL2
     ports:
-      - "3000:3000"
+      - "3001:3000"
 
   # ── Migration runner (dev — db push + seed) ────────────────────────────────
   migrate:
