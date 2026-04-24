@@ -121,10 +121,11 @@ jobs:
 
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v4
+        continue-on-error: true
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
           files: ./coverage/lcov.info
-          fail_ci_if_error: true
+          fail_ci_if_error: false
 
   # ─────────────────────────────────────────────
   # JOB 3: Docker Build & Push to ACR
