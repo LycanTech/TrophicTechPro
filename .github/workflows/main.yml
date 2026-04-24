@@ -35,23 +35,27 @@ jobs:
         with:
           node-version: '20'
           cache: 'npm'
+          cache-dependency-path: '**/package-lock.json'
 
       - name: Install dependencies
-        run: npm ci
+        run: npm ci --ignore-scripts
 
       - name: Run ESLint
+        id: eslint
         run: npm run lint -- --format=sarif --output-file=eslint-results.sarif
         continue-on-error: true
 
       - name: Upload ESLint results to GitHub Security tab
-        uses: github/codeql-action/upload-sarif@v3
-        if: always()
+        uses: github/codeql-action/upload-sarif@v4
+        if: always() && steps.eslint.outcome != 'skipped' && hashFiles('eslint-results.sarif') != ''
         with:
           sarif_file: eslint-results.sarif
           category: eslint
 
       - name: Run Trivy secret scan (source)
+        id: trivy-source
         uses: aquasecurity/trivy-action@master
+        continue-on-error: true
         with:
           scan-type: 'fs'
           scan-ref: '.'
@@ -62,8 +66,8 @@ jobs:
           output: 'trivy-source.sarif'
 
       - name: Upload Trivy SARIF
-        uses: github/codeql-action/upload-sarif@v3
-        if: always()
+        uses: github/codeql-action/upload-sarif@v4
+        if: always() && steps.trivy-source.outcome != 'skipped' && hashFiles('trivy-source.sarif') != ''
         with:
           sarif_file: trivy-source.sarif
           category: trivy-source
@@ -99,9 +103,10 @@ jobs:
         with:
           node-version: '20'
           cache: 'npm'
+          cache-dependency-path: '**/package-lock.json'
 
       - name: Install dependencies
-        run: npm ci
+        run: npm ci --ignore-scripts
 
       - name: Run unit tests with coverage
         run: npm run test:coverage
@@ -181,8 +186,8 @@ jobs:
           exit-code: '1'
 
       - name: Upload image scan SARIF
-        uses: github/codeql-action/upload-sarif@v3
-        if: always()
+        uses: github/codeql-action/upload-sarif@v4
+        if: always() && hashFiles('trivy-image.sarif') != ''
         with:
           sarif_file: trivy-image.sarif
           category: trivy-image
