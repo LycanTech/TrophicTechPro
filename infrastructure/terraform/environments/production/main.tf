@@ -169,6 +169,9 @@ module "keyvault" {
   # Populated in a second apply after AKS is provisioned
   aks_workload_identity_object_id = ""
   purge_protection_enabled        = true
+  # Public access needed so GitHub Actions runners (public IPs) can write secrets.
+  # Lock back down after migrating to private runners.
+  public_network_access_enabled   = true
   tags                            = local.tags
 }
 

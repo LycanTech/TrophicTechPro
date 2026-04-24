@@ -21,7 +21,7 @@ variable "location" {
 
 variable "kubernetes_version" {
   type    = string
-  default = "1.31"
+  default = null   # null → Azure picks the current stable non-LTS default
 }
 
 variable "db_admin_username" {
