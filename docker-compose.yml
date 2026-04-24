@@ -11,7 +11,7 @@ services:
       POSTGRES_PASSWORD: trophic_dev
       POSTGRES_DB:       trophic_mc
     ports:
-      - "5432:5432"
+      - "5433:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
@@ -29,11 +29,11 @@ services:
     container_name: trophic-app
     restart: unless-stopped
     ports:
-      - "3000:3000"
+      - "3001:3000"
     environment:
       DATABASE_URL:  postgresql://trophic:trophic_dev@postgres:5432/trophic_mc
       AUTH_SECRET:   local-dev-secret-change-in-production
-      NEXTAUTH_URL:  http://localhost:3000
+      NEXTAUTH_URL:  http://localhost:3001
       NODE_ENV:      production
     depends_on:
       postgres:
