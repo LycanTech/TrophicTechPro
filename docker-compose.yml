@@ -49,7 +49,7 @@ services:
     command: >
       sh -c "
         npx prisma migrate deploy &&
-        npm run db:seed
+        npx tsx prisma/seed.ts
       "
     environment:
       DATABASE_URL: postgresql://trophic:trophic_dev@postgres:5432/trophic_mc

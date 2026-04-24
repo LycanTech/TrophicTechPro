@@ -7,6 +7,7 @@
 #   - Runs the app with `npm run dev` (Fast Refresh) instead of `node server.js`
 #   - Mounts your source code so edits reflect instantly without rebuilding
 #   - Sets NODE_ENV=development
+#   - Uses `prisma db push` instead of migrate deploy (no migration files needed)
 # ─────────────────────────────────────────────────────────────────────────────
 
 services:
@@ -27,10 +28,15 @@ services:
     ports:
       - "3000:3000"
 
-  # ── Migration runner (dev) ─────────────────────────────────────────────────
+  # ── Migration runner (dev — db push + seed) ────────────────────────────────
   migrate:
     build:
       target: deps
+    command: >
+      sh -c "
+        npx prisma db push --accept-data-loss &&
+        npx tsx prisma/seed.ts
+      "
     volumes:
       - .:/app
       - /app/node_modules
