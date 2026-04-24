@@ -195,10 +195,10 @@ jobs:
           sbom: true
 
       - name: Scan Docker image for vulnerabilities (Trivy)
-        if: env.ACR_REGISTRY != ''
+        if: env.ACR_REGISTRY != '' && steps.build.outputs.digest != ''
         uses: aquasecurity/trivy-action@master
         with:
-          image-ref: ${{ env.ACR_REGISTRY }}/${{ env.ACR_REPOSITORY }}:sha-${{ github.sha }}
+          image-ref: ${{ env.ACR_REGISTRY }}/${{ env.ACR_REPOSITORY }}@${{ steps.build.outputs.digest }}
           format: 'sarif'
           output: 'trivy-image.sarif'
           severity: 'HIGH,CRITICAL'
