@@ -7,6 +7,11 @@ on:
     branches: [main]
   workflow_dispatch:
 
+permissions:
+  contents: read
+  security-events: write   # required for upload-sarif to post to the Security tab
+  pull-requests: read
+
 env:
   ACR_REGISTRY: ${{ secrets.ACR_REGISTRY }}           # e.g. trophictech.azurecr.io
   ACR_REPOSITORY: ${{ secrets.ACR_REPOSITORY }}       # e.g. app-name
