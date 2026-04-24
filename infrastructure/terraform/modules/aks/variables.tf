@@ -7,7 +7,7 @@ variable "log_analytics_workspace_id" { type = string }
 
 variable "kubernetes_version" {
   type    = string
-  default = "1.31"
+  default = "1.32"
 }
 
 variable "system_node_count" {
