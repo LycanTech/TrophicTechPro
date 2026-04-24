@@ -40,7 +40,7 @@ resource "azurerm_log_analytics_solution" "container_insights" {
 resource "azurerm_monitor_action_group" "ops" {
   name                = "${var.name_prefix}-ag-ops"
   resource_group_name = var.resource_group_name
-  short_name          = "zingy-ops"
+  short_name          = "trophic-ops"
 
   dynamic "email_receiver" {
     for_each = var.alert_email != "" ? [var.alert_email] : []
@@ -152,7 +152,7 @@ resource "azurerm_monitor_metric_alert" "pg_cpu_high" {
   description         = "PostgreSQL CPU above 80% — query optimisation or scale-up needed"
   severity            = 2
   frequency           = "PT5M"
-  window_size         = "PT10M"
+  window_size         = "PT15M"
 
   criteria {
     metric_namespace = "Microsoft.DBforPostgreSQL/flexibleServers"

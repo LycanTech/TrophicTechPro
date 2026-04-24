@@ -47,7 +47,7 @@ resource "azurerm_resource_group" "tfstate" {
   location = var.location
 
   tags = {
-    Project   = "zingy"
+    Project   = "trophic"
     ManagedBy = "terraform-bootstrap"
     Purpose   = "terraform-state"
   }
@@ -95,8 +95,8 @@ resource "azurerm_storage_container" "production" {
 
 # ─── Lock the storage account against deletion ───────────────────────────────
 resource "azurerm_management_lock" "tfstate" {
-  name       = "zingy-tfstate-lock"
+  name       = "trophic-tfstate-lock"
   scope      = azurerm_storage_account.tfstate.id
   lock_level = "CanNotDelete"
-  notes      = "Zingy Terraform remote state — do not delete"
+  notes      = "Trophic Tech Terraform remote state — do not delete"
 }

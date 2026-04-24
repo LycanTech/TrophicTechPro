@@ -6,7 +6,7 @@
 #   - VNet-injected private access (no public endpoint)
 #   - Private DNS zone  (*.postgres.database.azure.com) linked to the VNet
 #   - Hardened parameter configuration (SSL enforced, TLS 1.2+, connection throttle)
-#   - The application database (zingy_mc by default)
+#   - The application database (trophic_mc by default)
 #
 # The Prisma connection string is exposed as a sensitive output for Key Vault ingestion.
 
@@ -38,9 +38,10 @@ resource "azurerm_postgresql_flexible_server" "main" {
   location               = var.location
   resource_group_name    = var.resource_group_name
   version                = var.pg_version
-  delegated_subnet_id    = var.database_subnet_id
-  private_dns_zone_id    = azurerm_private_dns_zone.postgres.id
-  administrator_login    = var.admin_username
+  delegated_subnet_id           = var.database_subnet_id
+  private_dns_zone_id           = azurerm_private_dns_zone.postgres.id
+  public_network_access_enabled = false
+  administrator_login           = var.admin_username
   administrator_password = var.admin_password
   sku_name               = var.sku_name
   storage_mb             = var.storage_mb

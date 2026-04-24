@@ -33,6 +33,12 @@ variable "purge_protection_enabled" {
   description = "Prevents hard-deletion of the vault. Set false only in dev."
 }
 
+variable "public_network_access_enabled" {
+  type    = bool
+  default = false
+  description = "Allow public HTTPS access to the vault. Set true in staging so CI runners can write secrets."
+}
+
 variable "tags" {
   type    = map(string)
   default = {}

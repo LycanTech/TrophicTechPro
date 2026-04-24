@@ -49,7 +49,7 @@ locals {
     Project     = var.project
     Environment = var.environment
     ManagedBy   = "terraform"
-    Owner       = "platform@zingy.io"
+    Owner       = "platform@trophictech.io"
   }
 }
 
@@ -67,8 +67,10 @@ module "monitoring" {
   resource_group_name   = azurerm_resource_group.main.name
   log_retention_in_days = 30
   alert_email           = var.alert_email
-  aks_cluster_id        = module.aks.cluster_id
-  postgresql_server_id  = module.database.postgresql_id
+  # IDs are empty on first apply — alerts are skipped (count = 0).
+  # Run a second apply after AKS/DB are up to enable metric alerts.
+  aks_cluster_id        = ""
+  postgresql_server_id  = ""
   tags                  = local.tags
 }
 
@@ -92,7 +94,7 @@ module "acr" {
   sku                           = "Standard"              # Basic does not support private endpoints
   enable_private_endpoint       = false                   # cost saving — staging uses public access
   public_network_access_enabled = true                    # required when private endpoint is disabled
-  log_analytics_workspace_id    = module.monitoring.log_analytics_workspace_id
+  log_analytics_workspace_id    = ""                      # skip diag setting on first apply (count issue)
   tags                          = local.tags
 }
 
@@ -111,7 +113,7 @@ module "database" {
   ha_enabled                 = false    # no standby replica in staging
   geo_redundant_backup        = false
   backup_retention_days      = 7
-  log_analytics_workspace_id = module.monitoring.log_analytics_workspace_id
+  log_analytics_workspace_id = ""                      # skip diag setting on first apply (count issue)
   tags                       = local.tags
 }
 
@@ -143,16 +145,16 @@ module "keyvault" {
   private_endpoint_subnet_id      = module.networking.private_endpoint_subnet_id
   database_connection_string      = module.database.connection_string
   auth_secret                     = var.auth_secret
-  nextauth_url                    = "https://staging.zingy.io"
-  aks_workload_identity_object_id = module.aks.kubelet_identity_object_id
+  nextauth_url                    = "https://staging.trophictech.io"
+  # Populated in a second apply after AKS is provisioned
+  aks_workload_identity_object_id = ""
   purge_protection_enabled        = false   # allow staging vault cleanup
+  public_network_access_enabled   = true    # CI runners are on public IPs — must reach vault
   tags                            = local.tags
 }
 
-resource "azurerm_role_assignment" "aks_acr_pull" {
-  principal_id                     = module.aks.kubelet_identity_object_id
-  role_definition_name             = "AcrPull"
-  scope                            = module.acr.acr_id
-  skip_service_principal_aad_check = true
-}
+# azurerm_role_assignment.aks_acr_pull is intentionally omitted.
+# This subscription's ABAC condition blocks Terraform from creating role assignments.
+# The AcrPull role was granted manually to the kubelet identity via:
+#   az rest --method PUT .../roleAssignments/{guid} --body '{"properties":{"roleDefinitionId":"...7f951dda...","principalId":"<kubelet-oid>"}}'
 

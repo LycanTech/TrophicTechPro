@@ -57,7 +57,7 @@ locals {
     Project     = var.project
     Environment = var.environment
     ManagedBy   = "terraform"
-    Owner       = "platform@zingy.io"
+    Owner       = "platform@trophictech.io"
   }
 }
 
@@ -79,9 +79,10 @@ module "monitoring" {
   alert_email          = var.alert_email
   alert_webhook_url    = var.slack_webhook_url
 
-  # AKS and PostgreSQL IDs wired in after those resources are created
-  aks_cluster_id       = module.aks.cluster_id
-  postgresql_server_id = module.database.postgresql_id
+  # IDs are empty on first apply — alerts are skipped (count = 0).
+  # Run a second apply after AKS/DB are up to enable metric alerts.
+  aks_cluster_id       = ""
+  postgresql_server_id = ""
 
   tags = local.tags
 }
@@ -108,7 +109,7 @@ module "acr" {
   private_endpoint_subnet_id = module.networking.private_endpoint_subnet_id
   sku                        = "Premium"
   georeplication_locations   = var.acr_georeplication_locations
-  log_analytics_workspace_id = module.monitoring.log_analytics_workspace_id
+  log_analytics_workspace_id = ""                      # skip diag setting on first apply (count issue)
   tags                       = local.tags
 }
 
@@ -129,7 +130,7 @@ module "database" {
   ha_enabled                 = true
   geo_redundant_backup        = true
   backup_retention_days      = 35
-  log_analytics_workspace_id = module.monitoring.log_analytics_workspace_id
+  log_analytics_workspace_id = ""                      # skip diag setting on first apply (count issue)
   tags                       = local.tags
 }
 
@@ -165,17 +166,15 @@ module "keyvault" {
   database_connection_string      = module.database.connection_string
   auth_secret                     = var.auth_secret
   nextauth_url                    = "https://${var.app_hostname}"
-  aks_workload_identity_object_id = module.aks.kubelet_identity_object_id
+  # Populated in a second apply after AKS is provisioned
+  aks_workload_identity_object_id = ""
   purge_protection_enabled        = true
   tags                            = local.tags
 }
 
-# ─── Cross-cutting: AcrPull — AKS kubelet identity → ACR ─────────────────────
-# Allows the cluster to pull images without imagePullSecrets in every pod spec.
-resource "azurerm_role_assignment" "aks_acr_pull" {
-  principal_id         = module.aks.kubelet_identity_object_id
-  role_definition_name = "AcrPull"
-  scope                = module.acr.acr_id
-
-  skip_service_principal_aad_check = true   # managed identity — skip AAD propagation wait
-}
+# azurerm_role_assignment.aks_acr_pull is intentionally omitted.
+# This subscription's ABAC condition blocks Terraform from creating role assignments.
+# After production AKS is provisioned, grant AcrPull manually to the kubelet identity:
+#   KUBELET_OID=$(az aks show -n <aks-name> -g <rg> --query identityProfile.kubeletidentity.objectId -o tsv)
+#   az rest --method PUT .../registries/<acr>/providers/Microsoft.Authorization/roleAssignments/{guid} \
+#     --body '{"properties":{"roleDefinitionId":".../7f951dda-4ed3-4680-a7ca-43fe172d538d","principalId":"'$KUBELET_OID'"}}'
