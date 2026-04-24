@@ -166,7 +166,8 @@ module "keyvault" {
   database_connection_string      = module.database.connection_string
   auth_secret                     = var.auth_secret
   nextauth_url                    = "https://${var.app_hostname}"
-  aks_workload_identity_object_id = module.aks.kubelet_identity_object_id
+  # Populated in a second apply after AKS is provisioned
+  aks_workload_identity_object_id = ""
   purge_protection_enabled        = true
   tags                            = local.tags
 }

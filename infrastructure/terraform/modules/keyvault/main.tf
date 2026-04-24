@@ -17,7 +17,7 @@ resource "azurerm_key_vault" "main" {
   resource_group_name        = var.resource_group_name
   tenant_id                  = data.azurerm_client_config.current.tenant_id
   sku_name                   = "standard"
-  enable_rbac_authorization  = true   # RBAC model — no legacy access policies
+  rbac_authorization_enabled = true   # RBAC model — no legacy access policies
   soft_delete_retention_days = var.soft_delete_retention_days
   purge_protection_enabled   = var.purge_protection_enabled
 
@@ -110,9 +110,11 @@ resource "azurerm_key_vault_secret" "nextauth_url" {
 # ─── Role assignment — AKS workload identity reads secrets via CSI driver ──────
 # This is the identity the Helm chart's SecretProviderClass references.
 resource "azurerm_role_assignment" "kv_secrets_user_aks" {
-  count = var.aks_workload_identity_object_id != "" ? 1 : 0
+  for_each = toset(
+    var.aks_workload_identity_object_id != "" ? [var.aks_workload_identity_object_id] : []
+  )
 
   scope                = azurerm_key_vault.main.id
   role_definition_name = "Key Vault Secrets User"
-  principal_id         = var.aks_workload_identity_object_id
+  principal_id         = each.value
 }

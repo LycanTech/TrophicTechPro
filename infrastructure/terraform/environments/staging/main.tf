@@ -146,7 +146,8 @@ module "keyvault" {
   database_connection_string      = module.database.connection_string
   auth_secret                     = var.auth_secret
   nextauth_url                    = "https://staging.zingy.io"
-  aks_workload_identity_object_id = module.aks.kubelet_identity_object_id
+  # Populated in a second apply after AKS is provisioned
+  aks_workload_identity_object_id = ""
   purge_protection_enabled        = false   # allow staging vault cleanup
   tags                            = local.tags
 }
