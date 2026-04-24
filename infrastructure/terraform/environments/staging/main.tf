@@ -153,10 +153,8 @@ module "keyvault" {
   tags                            = local.tags
 }
 
-resource "azurerm_role_assignment" "aks_acr_pull" {
-  principal_id                     = module.aks.kubelet_identity_object_id
-  role_definition_name             = "AcrPull"
-  scope                            = module.acr.acr_id
-  skip_service_principal_aad_check = true
-}
+# azurerm_role_assignment.aks_acr_pull is intentionally omitted.
+# This subscription's ABAC condition blocks Terraform from creating role assignments.
+# The AcrPull role was granted manually to the kubelet identity via:
+#   az rest --method PUT .../roleAssignments/{guid} --body '{"properties":{"roleDefinitionId":"...7f951dda...","principalId":"<kubelet-oid>"}}'
 

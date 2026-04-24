@@ -172,12 +172,9 @@ module "keyvault" {
   tags                            = local.tags
 }
 
-# ─── Cross-cutting: AcrPull — AKS kubelet identity → ACR ─────────────────────
-# Allows the cluster to pull images without imagePullSecrets in every pod spec.
-resource "azurerm_role_assignment" "aks_acr_pull" {
-  principal_id         = module.aks.kubelet_identity_object_id
-  role_definition_name = "AcrPull"
-  scope                = module.acr.acr_id
-
-  skip_service_principal_aad_check = true   # managed identity — skip AAD propagation wait
-}
+# azurerm_role_assignment.aks_acr_pull is intentionally omitted.
+# This subscription's ABAC condition blocks Terraform from creating role assignments.
+# After production AKS is provisioned, grant AcrPull manually to the kubelet identity:
+#   KUBELET_OID=$(az aks show -n <aks-name> -g <rg> --query identityProfile.kubeletidentity.objectId -o tsv)
+#   az rest --method PUT .../registries/<acr>/providers/Microsoft.Authorization/roleAssignments/{guid} \
+#     --body '{"properties":{"roleDefinitionId":".../7f951dda-4ed3-4680-a7ca-43fe172d538d","principalId":"'$KUBELET_OID'"}}'
