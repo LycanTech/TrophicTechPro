@@ -94,7 +94,7 @@ module "acr" {
   sku                           = "Standard"              # Basic does not support private endpoints
   enable_private_endpoint       = false                   # cost saving — staging uses public access
   public_network_access_enabled = true                    # required when private endpoint is disabled
-  log_analytics_workspace_id    = module.monitoring.log_analytics_workspace_id
+  log_analytics_workspace_id    = ""                      # skip diag setting on first apply (count issue)
   tags                          = local.tags
 }
 
@@ -113,7 +113,7 @@ module "database" {
   ha_enabled                 = false    # no standby replica in staging
   geo_redundant_backup        = false
   backup_retention_days      = 7
-  log_analytics_workspace_id = module.monitoring.log_analytics_workspace_id
+  log_analytics_workspace_id = ""                      # skip diag setting on first apply (count issue)
   tags                       = local.tags
 }
 

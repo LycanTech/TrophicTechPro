@@ -109,7 +109,7 @@ module "acr" {
   private_endpoint_subnet_id = module.networking.private_endpoint_subnet_id
   sku                        = "Premium"
   georeplication_locations   = var.acr_georeplication_locations
-  log_analytics_workspace_id = module.monitoring.log_analytics_workspace_id
+  log_analytics_workspace_id = ""                      # skip diag setting on first apply (count issue)
   tags                       = local.tags
 }
 
@@ -130,7 +130,7 @@ module "database" {
   ha_enabled                 = true
   geo_redundant_backup        = true
   backup_retention_days      = 35
-  log_analytics_workspace_id = module.monitoring.log_analytics_workspace_id
+  log_analytics_workspace_id = ""                      # skip diag setting on first apply (count issue)
   tags                       = local.tags
 }
 
