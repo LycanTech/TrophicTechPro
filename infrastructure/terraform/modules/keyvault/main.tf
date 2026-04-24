@@ -71,22 +71,17 @@ resource "azurerm_private_endpoint" "kv" {
   tags = var.tags
 }
 
-# ─── Role assignment — terraform runner needs Secrets Officer to write secrets ──
-resource "azurerm_role_assignment" "kv_secrets_officer_deployer" {
-  scope                = azurerm_key_vault.main.id
-  role_definition_name = "Key Vault Secrets Officer"
-  principal_id         = data.azurerm_client_config.current.object_id
-}
-
 # ─── Application secrets ───────────────────────────────────────────────────────
-# Stored in Key Vault; the AKS CSI driver mounts them as files or env vars.
+# The deployer SP must have "Key Vault Secrets Officer" pre-granted at the KV scope.
+# In this subscription the ABAC condition blocks Terraform from creating that role
+# assignment itself, so it is granted once via:
+#   az rest --method PUT --url ".../roleAssignments/{guid}?api-version=2022-04-01" \
+#     --body '{"properties":{"roleDefinitionId":".../b86a8fe4-...","principalId":"<SP OID>"}}'
 resource "azurerm_key_vault_secret" "database_url" {
   name         = "DATABASE-URL"
   value        = var.database_connection_string
   key_vault_id = azurerm_key_vault.main.id
   tags         = { ManagedBy = "terraform" }
-
-  depends_on = [azurerm_role_assignment.kv_secrets_officer_deployer]
 }
 
 resource "azurerm_key_vault_secret" "auth_secret" {
@@ -94,8 +89,6 @@ resource "azurerm_key_vault_secret" "auth_secret" {
   value        = var.auth_secret
   key_vault_id = azurerm_key_vault.main.id
   tags         = { ManagedBy = "terraform" }
-
-  depends_on = [azurerm_role_assignment.kv_secrets_officer_deployer]
 }
 
 resource "azurerm_key_vault_secret" "nextauth_url" {
@@ -103,8 +96,6 @@ resource "azurerm_key_vault_secret" "nextauth_url" {
   value        = var.nextauth_url
   key_vault_id = azurerm_key_vault.main.id
   tags         = { ManagedBy = "terraform" }
-
-  depends_on = [azurerm_role_assignment.kv_secrets_officer_deployer]
 }
 
 # ─── Role assignment — AKS workload identity reads secrets via CSI driver ──────

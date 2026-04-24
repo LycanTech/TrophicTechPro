@@ -222,6 +222,10 @@ jobs:
       name: staging
       url: https://staging.trophictech.io
 
+    permissions:
+      id-token: write
+      contents: read
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -229,7 +233,9 @@ jobs:
       - name: Log in to Azure CLI
         uses: azure/login@v2
         with:
-          creds: ${{ secrets.AZURE_CREDENTIALS }}
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
 
       - name: Set AKS context
         uses: azure/aks-set-context@v3
@@ -266,7 +272,7 @@ jobs:
 
           STAGING_URL="https://staging.trophictech.io"
           echo "Running smoke test against $STAGING_URL"
-          curl --fail --retry 3 --retry-delay 10 "$STAGING_URL/healthz" \
+          curl --fail --retry 3 --retry-delay 10 "$STAGING_URL/api/health" \
             | jq -e '.status == "ok"'
 
   # ─────────────────────────────────────────────
@@ -296,6 +302,10 @@ jobs:
       name: production
       url: https://app.trophictech.io
 
+    permissions:
+      id-token: write
+      contents: read
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -303,7 +313,9 @@ jobs:
       - name: Log in to Azure CLI
         uses: azure/login@v2
         with:
-          creds: ${{ secrets.AZURE_CREDENTIALS }}
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
 
       - name: Set AKS context
         uses: azure/aks-set-context@v3
@@ -369,7 +381,7 @@ jobs:
             --timeout=300s
 
           PROD_URL="https://app.trophictech.io"
-          HTTP_STATUS=$(curl -o /dev/null -s -w "%{http_code}" "$PROD_URL/healthz")
+          HTTP_STATUS=$(curl -o /dev/null -s -w "%{http_code}" "$PROD_URL/api/health")
 
           if [ "$HTTP_STATUS" -ne 200 ]; then
             echo "Health check FAILED (HTTP $HTTP_STATUS). Initiating rollback..."
