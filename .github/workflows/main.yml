@@ -249,6 +249,9 @@ jobs:
           resource-group: ${{ env.AKS_RESOURCE_GROUP }}
           cluster-name: ${{ env.AKS_CLUSTER }}
 
+      - name: Convert kubeconfig to use az CLI credentials
+        run: kubelogin convert-kubeconfig -l azurecli
+
       - name: Set up Helm
         uses: azure/setup-helm@v3
         with:
@@ -333,6 +336,9 @@ jobs:
         with:
           resource-group: ${{ env.AKS_RESOURCE_GROUP }}
           cluster-name: ${{ env.AKS_CLUSTER }}
+
+      - name: Convert kubeconfig to use az CLI credentials
+        run: kubelogin convert-kubeconfig -l azurecli
 
       - name: Set up Helm
         uses: azure/setup-helm@v3
