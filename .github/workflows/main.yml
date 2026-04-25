@@ -282,8 +282,20 @@ jobs:
             --set ingress.host=staging.trophictech.io \
             --set env=staging \
             --atomic \
-            --timeout 5m \
+            --timeout 10m \
             --wait
+
+      - name: Debug staging pods on failure
+        if: failure()
+        run: |
+          echo "=== Nodes ==="
+          kubectl get nodes -o wide || true
+          echo "=== Pods ==="
+          kubectl get pods -n ${{ env.STAGING_NAMESPACE }} -o wide || true
+          echo "=== Events (last 30) ==="
+          kubectl get events -n ${{ env.STAGING_NAMESPACE }} --sort-by='.lastTimestamp' 2>/dev/null | tail -30 || true
+          echo "=== Describe pods ==="
+          kubectl describe pods -n ${{ env.STAGING_NAMESPACE }} 2>/dev/null | tail -80 || true
 
       - name: Run smoke tests against staging
         run: |
