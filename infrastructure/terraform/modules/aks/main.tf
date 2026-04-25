@@ -115,10 +115,9 @@ resource "azurerm_kubernetes_cluster_node_pool" "app" {
     "trophictech.io/pool" = "app"
   }
 
-  # max_surge = "0" + max_unavailable = 1 avoids creating extra nodes during upgrades,
-  # which matters on subscriptions with tight vCPU quota.
+  # max_unavailable = 1 (no surge nodes) avoids extra vCPU consumption during upgrades
+  # on subscriptions with tight quota. max_surge and max_unavailable are mutually exclusive.
   upgrade_settings {
-    max_surge       = "0"
     max_unavailable = 1
   }
 
