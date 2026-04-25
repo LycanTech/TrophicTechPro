@@ -257,6 +257,19 @@ jobs:
         with:
           version: 'v3.14.0'
 
+      - name: Create Kubernetes app secrets from Key Vault (staging)
+        run: |
+          kubectl create namespace ${{ env.STAGING_NAMESPACE }} --dry-run=client -o yaml | kubectl apply -f -
+          DB_URL=$(az keyvault secret show --vault-name trophic-staging-kv --name DATABASE-URL --query value -o tsv)
+          AUTH_SEC=$(az keyvault secret show --vault-name trophic-staging-kv --name AUTH-SECRET --query value -o tsv)
+          NX_URL=$(az keyvault secret show --vault-name trophic-staging-kv --name NEXTAUTH-URL --query value -o tsv)
+          kubectl create secret generic trophic-mc-secrets \
+            --namespace ${{ env.STAGING_NAMESPACE }} \
+            --from-literal=DATABASE_URL="$DB_URL" \
+            --from-literal=AUTH_SECRET="$AUTH_SEC" \
+            --from-literal=NEXTAUTH_URL="$NX_URL" \
+            --dry-run=client -o yaml | kubectl apply -f -
+
       - name: Deploy to staging via Helm
         run: |
           helm upgrade --install ${{ env.HELM_RELEASE }}-staging ${{ env.HELM_CHART_PATH }} \
@@ -344,6 +357,19 @@ jobs:
         uses: azure/setup-helm@v3
         with:
           version: 'v3.14.0'
+
+      - name: Create Kubernetes app secrets from Key Vault (production)
+        run: |
+          kubectl create namespace ${{ env.PROD_NAMESPACE }} --dry-run=client -o yaml | kubectl apply -f -
+          DB_URL=$(az keyvault secret show --vault-name trophic-prod-kv --name DATABASE-URL --query value -o tsv)
+          AUTH_SEC=$(az keyvault secret show --vault-name trophic-prod-kv --name AUTH-SECRET --query value -o tsv)
+          NX_URL=$(az keyvault secret show --vault-name trophic-prod-kv --name NEXTAUTH-URL --query value -o tsv)
+          kubectl create secret generic trophic-mc-secrets \
+            --namespace ${{ env.PROD_NAMESPACE }} \
+            --from-literal=DATABASE_URL="$DB_URL" \
+            --from-literal=AUTH_SECRET="$AUTH_SEC" \
+            --from-literal=NEXTAUTH_URL="$NX_URL" \
+            --dry-run=client -o yaml | kubectl apply -f -
 
       - name: Deploy to production via Helm (canary → full)
         run: |

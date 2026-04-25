@@ -5,8 +5,7 @@ image:
   pullPolicy: IfNotPresent
   digest: ""
 
-imagePullSecrets:
-  - name: acr-secret
+imagePullSecrets: []   # AcrPull via kubelet managed identity — no pull secret needed
 
 # ── Replica & environment ─────────────────────────────────────
 replicaCount: 3
