@@ -147,6 +147,20 @@ resource "azurerm_network_security_group" "database" {
     destination_address_prefix = "*"
   }
 
+  # PostgreSQL Flexible Server HA: standby replica contacts primary within the same
+  # subnet — must be explicitly allowed because DenyAllOtherInbound blocks it otherwise.
+  security_rule {
+    name                       = "AllowPostgresHAIntraSubnet"
+    priority                   = 110
+    direction                  = "Inbound"
+    access                     = "Allow"
+    protocol                   = "Tcp"
+    source_port_range          = "*"
+    destination_port_range     = "5432"
+    source_address_prefix      = var.database_subnet_cidr
+    destination_address_prefix = "*"
+  }
+
   security_rule {
     name                       = "DenyAllOtherInbound"
     priority                   = 4000
