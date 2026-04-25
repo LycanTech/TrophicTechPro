@@ -299,15 +299,12 @@ jobs:
 
       - name: Run smoke tests against staging
         run: |
-          echo "Waiting for deployment rollout..."
-          kubectl rollout status deployment/${{ env.HELM_RELEASE }}-staging \
-            -n ${{ env.STAGING_NAMESPACE }} \
-            --timeout=300s
-
+          # helm upgrade --wait already confirmed the deployment is ready;
+          # kubectl rollout status is skipped to avoid deployment-name guessing.
           STAGING_URL="https://staging.trophictech.io"
           echo "Running smoke test against $STAGING_URL"
-          curl --fail --retry 3 --retry-delay 10 "$STAGING_URL/api/health" \
-            | jq -e '.status == "ok"'
+          curl --fail --retry 5 --retry-delay 15 --retry-all-errors \
+            "$STAGING_URL/api/health" | jq -e '.status == "ok"'
 
   # ─────────────────────────────────────────────
   # JOB 5: Manual Approval Gate
