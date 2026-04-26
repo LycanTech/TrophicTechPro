@@ -147,9 +147,11 @@ module "aks" {
   kubernetes_version         = var.kubernetes_version
   system_node_count          = 2
   system_node_vm_size        = "Standard_D2s_v3"
-  app_node_vm_size           = "Standard_D4s_v3"
-  app_node_min_count         = 2
-  app_node_max_count         = 10
+  # Reduced to D2s_v3 × 1 to fit within training subscription's DSv3 vCPU quota (6 total).
+  # System pool consumes 4 vCPUs (2 × D2s_v3), leaving 2 for the app pool.
+  app_node_vm_size           = "Standard_D2s_v3"
+  app_node_min_count         = 1
+  app_node_max_count         = 3
   private_cluster_enabled    = true
   tags                       = local.tags
 }
@@ -169,6 +171,9 @@ module "keyvault" {
   # Populated in a second apply after AKS is provisioned
   aks_workload_identity_object_id = ""
   purge_protection_enabled        = true
+  # Public access needed so GitHub Actions runners (public IPs) can write secrets.
+  # Lock back down after migrating to private runners.
+  public_network_access_enabled   = true
   tags                            = local.tags
 }
 
