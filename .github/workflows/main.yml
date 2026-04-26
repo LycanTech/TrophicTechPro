@@ -274,30 +274,47 @@ jobs:
         run: |
           IMAGE="${{ env.ACR_REGISTRY }}/${{ env.ACR_REPOSITORY }}:sha-${{ github.sha }}"
           JOB_NAME="db-migrate-${{ github.run_id }}"
+          NS="${{ env.STAGING_NAMESPACE }}"
           kubectl apply -f - <<EOF
           apiVersion: batch/v1
           kind: Job
           metadata:
             name: ${JOB_NAME}
-            namespace: ${{ env.STAGING_NAMESPACE }}
+            namespace: ${NS}
           spec:
             ttlSecondsAfterFinished: 300
-            backoffLimit: 2
+            backoffLimit: 0
             template:
               spec:
                 restartPolicy: Never
                 containers:
                 - name: migrator
                   image: ${IMAGE}
-                  command: ["npx", "prisma", "migrate", "deploy"]
+                  workingDir: /app
+                  command: ["node", "node_modules/prisma/build/index.js", "migrate", "deploy"]
                   envFrom:
                   - secretRef:
                       name: trophic-mc-secrets
           EOF
-          kubectl wait job/${JOB_NAME} \
-            --namespace ${{ env.STAGING_NAMESPACE }} \
-            --for=condition=complete \
-            --timeout=180s
+          echo "Waiting for migration job..."
+          DEADLINE=$(($(date +%s) + 240))
+          while [ "$(date +%s)" -lt "$DEADLINE" ]; do
+            COMPLETE=$(kubectl get job/${JOB_NAME} -n ${NS} \
+              -o jsonpath='{.status.conditions[?(@.type=="Complete")].status}' 2>/dev/null || true)
+            FAILED=$(kubectl get job/${JOB_NAME} -n ${NS} \
+              -o jsonpath='{.status.conditions[?(@.type=="Failed")].status}' 2>/dev/null || true)
+            if [ "$COMPLETE" = "True" ]; then
+              echo "Migration completed successfully."
+              break
+            fi
+            if [ "$FAILED" = "True" ]; then
+              echo "=== Migration job FAILED — pod logs ==="
+              kubectl logs -n ${NS} -l job-name=${JOB_NAME} --tail=100 || true
+              kubectl describe pods -n ${NS} -l job-name=${JOB_NAME} | tail -40 || true
+              exit 1
+            fi
+            sleep 10
+          done
 
       - name: Deploy to staging via Helm
         run: |
@@ -412,30 +429,47 @@ jobs:
         run: |
           IMAGE="${{ env.ACR_REGISTRY }}/${{ env.ACR_REPOSITORY }}:sha-${{ github.sha }}"
           JOB_NAME="db-migrate-${{ github.run_id }}"
+          NS="${{ env.PROD_NAMESPACE }}"
           kubectl apply -f - <<EOF
           apiVersion: batch/v1
           kind: Job
           metadata:
             name: ${JOB_NAME}
-            namespace: ${{ env.PROD_NAMESPACE }}
+            namespace: ${NS}
           spec:
             ttlSecondsAfterFinished: 300
-            backoffLimit: 2
+            backoffLimit: 0
             template:
               spec:
                 restartPolicy: Never
                 containers:
                 - name: migrator
                   image: ${IMAGE}
-                  command: ["npx", "prisma", "migrate", "deploy"]
+                  workingDir: /app
+                  command: ["node", "node_modules/prisma/build/index.js", "migrate", "deploy"]
                   envFrom:
                   - secretRef:
                       name: trophic-mc-secrets
           EOF
-          kubectl wait job/${JOB_NAME} \
-            --namespace ${{ env.PROD_NAMESPACE }} \
-            --for=condition=complete \
-            --timeout=180s
+          echo "Waiting for migration job..."
+          DEADLINE=$(($(date +%s) + 240))
+          while [ "$(date +%s)" -lt "$DEADLINE" ]; do
+            COMPLETE=$(kubectl get job/${JOB_NAME} -n ${NS} \
+              -o jsonpath='{.status.conditions[?(@.type=="Complete")].status}' 2>/dev/null || true)
+            FAILED=$(kubectl get job/${JOB_NAME} -n ${NS} \
+              -o jsonpath='{.status.conditions[?(@.type=="Failed")].status}' 2>/dev/null || true)
+            if [ "$COMPLETE" = "True" ]; then
+              echo "Migration completed successfully."
+              break
+            fi
+            if [ "$FAILED" = "True" ]; then
+              echo "=== Migration job FAILED — pod logs ==="
+              kubectl logs -n ${NS} -l job-name=${JOB_NAME} --tail=100 || true
+              kubectl describe pods -n ${NS} -l job-name=${JOB_NAME} | tail -40 || true
+              exit 1
+            fi
+            sleep 10
+          done
 
       - name: Deploy to production via Helm (canary → full)
         run: |
