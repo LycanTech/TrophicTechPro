@@ -270,6 +270,35 @@ jobs:
             --from-literal=NEXTAUTH_URL="$NX_URL" \
             --dry-run=client -o yaml | kubectl apply -f -
 
+      - name: Run database migrations (staging)
+        run: |
+          IMAGE="${{ env.ACR_REGISTRY }}/${{ env.ACR_REPOSITORY }}:sha-${{ github.sha }}"
+          JOB_NAME="db-migrate-${{ github.run_id }}"
+          kubectl apply -f - <<EOF
+          apiVersion: batch/v1
+          kind: Job
+          metadata:
+            name: ${JOB_NAME}
+            namespace: ${{ env.STAGING_NAMESPACE }}
+          spec:
+            ttlSecondsAfterFinished: 300
+            backoffLimit: 2
+            template:
+              spec:
+                restartPolicy: Never
+                containers:
+                - name: migrator
+                  image: ${IMAGE}
+                  command: ["npx", "prisma", "migrate", "deploy"]
+                  envFrom:
+                  - secretRef:
+                      name: trophic-mc-secrets
+          EOF
+          kubectl wait job/${JOB_NAME} \
+            --namespace ${{ env.STAGING_NAMESPACE }} \
+            --for=condition=complete \
+            --timeout=180s
+
       - name: Deploy to staging via Helm
         run: |
           helm upgrade --install ${{ env.HELM_RELEASE }}-staging ${{ env.HELM_CHART_PATH }} \
@@ -378,6 +407,35 @@ jobs:
             --from-literal=AUTH_SECRET="$AUTH_SEC" \
             --from-literal=NEXTAUTH_URL="$NX_URL" \
             --dry-run=client -o yaml | kubectl apply -f -
+
+      - name: Run database migrations (production)
+        run: |
+          IMAGE="${{ env.ACR_REGISTRY }}/${{ env.ACR_REPOSITORY }}:sha-${{ github.sha }}"
+          JOB_NAME="db-migrate-${{ github.run_id }}"
+          kubectl apply -f - <<EOF
+          apiVersion: batch/v1
+          kind: Job
+          metadata:
+            name: ${JOB_NAME}
+            namespace: ${{ env.PROD_NAMESPACE }}
+          spec:
+            ttlSecondsAfterFinished: 300
+            backoffLimit: 2
+            template:
+              spec:
+                restartPolicy: Never
+                containers:
+                - name: migrator
+                  image: ${IMAGE}
+                  command: ["npx", "prisma", "migrate", "deploy"]
+                  envFrom:
+                  - secretRef:
+                      name: trophic-mc-secrets
+          EOF
+          kubectl wait job/${JOB_NAME} \
+            --namespace ${{ env.PROD_NAMESPACE }} \
+            --for=condition=complete \
+            --timeout=180s
 
       - name: Deploy to production via Helm (canary → full)
         run: |
