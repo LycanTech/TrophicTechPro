@@ -415,7 +415,7 @@ jobs:
       - name: Ensure production PostgreSQL is running
         run: |
           DB_SERVER="trophic-prod-pg"
-          DB_RG="${{ env.AKS_RESOURCE_GROUP }}"
+          DB_RG="trophic-prod-rg"   # Terraform production resource group (trophic-prod-rg)
           STATE=$(az postgres flexible-server show \
             --name "$DB_SERVER" --resource-group "$DB_RG" \
             --query state -o tsv 2>/dev/null || echo "NotFound")
