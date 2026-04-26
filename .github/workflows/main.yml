@@ -412,6 +412,36 @@ jobs:
         with:
           version: 'v3.14.0'
 
+      - name: Ensure production PostgreSQL is running
+        run: |
+          DB_SERVER="trophic-prod-pg"
+          DB_RG="${{ env.AKS_RESOURCE_GROUP }}"
+          STATE=$(az postgres flexible-server show \
+            --name "$DB_SERVER" --resource-group "$DB_RG" \
+            --query state -o tsv 2>/dev/null || echo "NotFound")
+          echo "PostgreSQL state: $STATE"
+          if [ "$STATE" = "NotFound" ]; then
+            echo "ERROR: Production PostgreSQL '$DB_SERVER' not found in '$DB_RG'."
+            echo "Run the terraform-production workflow to provision infrastructure first."
+            exit 1
+          fi
+          if [ "$STATE" = "Stopped" ]; then
+            echo "Starting production PostgreSQL server..."
+            az postgres flexible-server start --name "$DB_SERVER" --resource-group "$DB_RG"
+          fi
+          for i in $(seq 1 30); do
+            STATE=$(az postgres flexible-server show \
+              --name "$DB_SERVER" --resource-group "$DB_RG" \
+              --query state -o tsv 2>/dev/null || echo "Unknown")
+            echo "  attempt $i/30 — state: $STATE"
+            [ "$STATE" = "Ready" ] && break
+            sleep 10
+          done
+          if [ "$STATE" != "Ready" ]; then
+            echo "ERROR: PostgreSQL did not reach Ready state after 5 minutes."
+            exit 1
+          fi
+
       - name: Create Kubernetes app secrets from Key Vault (production)
         run: |
           kubectl create namespace ${{ env.PROD_NAMESPACE }} --dry-run=client -o yaml | kubectl apply -f -
