@@ -237,35 +237,73 @@ Tests live in `__tests__/`. The Jest config uses `nextJest` with `jest-environme
 
 ## CI/CD Pipeline
 
-The pipeline is defined in [`.github/workflows/main.yml`](.github/workflows/main.yml) and runs on push to `main`/`develop` and on all PRs targeting `main`.
+The pipeline is defined in [`.github/workflows/main.yml`](.github/workflows/main.yml) and follows a **two-branch model** that mirrors a real production promotion flow.
+
+### Branch strategy
+
+```text
+feature/* ──► staging (push) ──► Jobs 1–4 only (Security → Tests → Build → Deploy Staging)
+                                      │
+                              PR merge to main
+                                      │
+                                      ▼
+                             main (push) ──► Jobs 1–6 (full pipeline, including Approval Gate → Production)
+```
+
+- Merging a PR from `staging` → `main` is the gate that triggers the full production pipeline.
+- `workflow_dispatch` can trigger any job manually on either branch from the Actions tab.
 
 ### Jobs
 
-| # | Job               | What it does                                                                 |
-|---|-------------------|------------------------------------------------------------------------------|
-| 1 | `security-scan`   | Trivy secret/vuln scan (FS + image), ESLint SARIF → GitHub Security tab     |
-| 2 | `test`            | Jest with Postgres service container, Codecov upload                         |
-| 3 | `build-push`      | BuildKit → ACR, image Trivy scan, SBOM upload                               |
-| 4 | `deploy-staging`  | `helm upgrade --atomic` to staging namespace, smoke test on `/api/health`   |
-| 5 | `approval-gate`   | GitHub Environment required reviewer pause                                   |
-| 6 | `deploy-production` | Canary 20% → 90 s soak → full rollout → health check → auto `helm rollback` on failure → Slack notification |
+| # | Job | Runs on | What it does |
+| --- | --- | --- | --- |
+| 1 | `security-scan` | every push / PR | ESLint SARIF → GitHub Security tab; Trivy FS secret + vuln scan |
+| 2 | `test` | every push / PR | Jest with Postgres 16 service container; Codecov upload |
+| 3 | `build-push` | `main` or `staging` push | BuildKit → ACR (sha tag + `latest` on `main`); Trivy image scan + SBOM |
+| 4 | `deploy-staging` | after `build-push` | Pulls KV secrets → K8s Secret; runs Prisma `migrate deploy` as a K8s Job; `helm upgrade --atomic --timeout 10m` to `staging` namespace; smoke test on `/api/health` |
+| 5 | `approval-gate` | `main` only | Pauses pipeline at the `production-approval` GitHub Environment — a required reviewer must approve |
+| 6 | `deploy-production` | `main` only, after approval | Checks PostgreSQL is `Ready` (auto-starts if `Stopped`); pulls KV secrets; runs Prisma migrations; canary deploy (20% weight, 1 replica, 30 s soak) → full rollout (3 replicas) → canary cleanup; Slack success/failure notification |
+
+### Database migrations
+
+Both staging and production runs execute Prisma migrations as a Kubernetes `batch/v1 Job` **before** every Helm deploy. The job uses the same Docker image being deployed and runs:
+
+```sh
+node node_modules/prisma/build/index.js migrate deploy
+```
+
+The workflow polls the job every 10 s and streams pod logs to the run output on failure. `ttlSecondsAfterFinished: 300` cleans up completed jobs automatically.
+
+### GitHub Environments
+
+Create these three environments in **Settings → Environments**:
+
+| Environment | Protection rules |
+| --- | --- |
+| `staging` | None required |
+| `production-approval` | **Required reviewer(s)** — this is the manual approval gate |
+| `production` | None (guarded by the `approval-gate` job dependency) |
 
 ### Required Secrets
 
 Set these in **GitHub → Settings → Secrets and variables → Actions**:
 
-| Secret                | Description                              |
-|-----------------------|------------------------------------------|
-| `ACR_REGISTRY`        | ACR login server (e.g. `trophic.azurecr.io`) |
-| `ACR_REPOSITORY`      | Image name (e.g. `mission-control`)      |
-| `AKS_CLUSTER`         | AKS cluster name                         |
-| `AKS_RESOURCE_GROUP`  | Azure resource group                     |
-| `AZURE_CLIENT_ID`     | Service principal / OIDC app client ID   |
-| `AZURE_TENANT_ID`     | Azure tenant ID                          |
-| `AZURE_SUBSCRIPTION_ID` | Azure subscription ID                  |
-| `HELM_RELEASE`        | Helm release name                        |
-| `SLACK_WEBHOOK_URL`   | Slack incoming webhook for deploy alerts |
-| `CODECOV_TOKEN`       | Codecov upload token                     |
+| Secret | Description |
+| --- | --- |
+| `AZURE_CLIENT_ID` | OIDC federated identity client ID (used by `azure/login@v2`) |
+| `AZURE_TENANT_ID` | Azure tenant ID |
+| `AZURE_SUBSCRIPTION_ID` | Azure subscription ID |
+| `ACR_REGISTRY` | ACR login server — e.g. `trophictech.azurecr.io` |
+| `ACR_REPOSITORY` | Image name — e.g. `mission-control` |
+| `AKS_CLUSTER` | AKS cluster name |
+| `AKS_RESOURCE_GROUP` | Resource group containing the AKS cluster |
+| `HELM_RELEASE` | Helm release base name — e.g. `trophic-app` |
+| `SLACK_WEBHOOK_URL` | Slack incoming webhook for deploy success/failure alerts |
+| `CODECOV_TOKEN` | Codecov upload token |
+
+> **Note:** Azure authentication uses OIDC (`id-token: write`), not a service-principal JSON blob. No `ACR_PASSWORD` or `AZURE_CREDENTIALS` secret is needed.
+>
+> Key Vault names (`trophic-staging-kv` / `trophic-prod-kv`) are hardcoded in the workflow and provisioned by Terraform — they do not need to be GitHub secrets.
 
 ---
 
