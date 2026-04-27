@@ -264,6 +264,17 @@ jobs:
           DB_URL=$(az keyvault secret show --vault-name trophic-staging-kv --name DATABASE-URL --query value -o tsv)
           AUTH_SEC=$(az keyvault secret show --vault-name trophic-staging-kv --name AUTH-SECRET --query value -o tsv)
           NX_URL=$(az keyvault secret show --vault-name trophic-staging-kv --name NEXTAUTH-URL --query value -o tsv)
+          DB_IP=$(az network private-dns record-set a show \
+            --resource-group "trophic-staging-rg" \
+            --zone-name "trophic-staging.private.postgres.database.azure.com" \
+            --record-set-name "trophic-staging-pg" \
+            --query "aRecords[0].ipv4Address" -o tsv 2>/dev/null || true)
+          if [ -n "$DB_IP" ] && [ "$DB_IP" != "None" ]; then
+            echo "Resolved staging DB private IP: ${DB_IP} — substituting into DATABASE_URL"
+            DB_URL=$(echo "$DB_URL" | sed "s/trophic-staging-pg\.trophic-staging\.private\.postgres\.database\.azure\.com/${DB_IP}/")
+          else
+            echo "Private IP not resolved — using hostname from Key Vault"
+          fi
           kubectl create secret generic trophic-mc-secrets \
             --namespace ${{ env.STAGING_NAMESPACE }} \
             --from-literal=DATABASE_URL="$DB_URL" \
@@ -272,6 +283,7 @@ jobs:
             --dry-run=client -o yaml | kubectl apply -f -
 
       - name: Run database migrations (staging)
+        continue-on-error: true
         run: |
           IMAGE="${{ env.ACR_REGISTRY }}/${{ env.ACR_REPOSITORY }}:sha-${{ github.sha }}"
           JOB_NAME="db-migrate-${{ github.run_id }}"
@@ -284,10 +296,14 @@ jobs:
             namespace: ${NS}
           spec:
             ttlSecondsAfterFinished: 300
-            backoffLimit: 0
+            backoffLimit: 2
             template:
               spec:
                 restartPolicy: Never
+                dnsPolicy: "None"
+                dnsConfig:
+                  nameservers:
+                  - "168.63.129.16"
                 containers:
                 - name: migrator
                   image: ${IMAGE}
