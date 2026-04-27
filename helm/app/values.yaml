@@ -32,14 +32,13 @@ service:
 ingress:
   enabled: true
   className: nginx
-  host: app.4.153.186.111.nip.io
+  host: app.68.220.239.81.nip.io
   tls:
-    enabled: true
+    enabled: false
     secretName: trophic-tls
   annotations:
-    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/ssl-redirect: "false"
     nginx.ingress.kubernetes.io/proxy-body-size: "10m"
-    cert-manager.io/cluster-issuer: letsencrypt-prod
   canary:
     enabled: false
     weight: 0

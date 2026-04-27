@@ -42,7 +42,7 @@ variable "auth_secret" {
 
 variable "app_hostname" {
   type    = string
-  default = "app.4.153.186.111.nip.io"
+  default = "app.68.220.239.81.nip.io"
 }
 
 variable "alert_email" {
