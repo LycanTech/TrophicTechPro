@@ -263,7 +263,7 @@ jobs:
           kubectl create namespace ${{ env.STAGING_NAMESPACE }} --dry-run=client -o yaml | kubectl apply -f -
           DB_URL=$(az keyvault secret show --vault-name trophic-staging-kv --name DATABASE-URL --query value -o tsv)
           AUTH_SEC=$(az keyvault secret show --vault-name trophic-staging-kv --name AUTH-SECRET --query value -o tsv)
-          NX_URL=$(az keyvault secret show --vault-name trophic-staging-kv --name NEXTAUTH-URL --query value -o tsv)
+          NX_URL="http://staging.68.220.239.81.nip.io"
           DB_IP=$(az network private-dns record-set a show \
             --resource-group "trophic-staging-rg" \
             --zone-name "trophic-staging.private.postgres.database.azure.com" \
@@ -280,6 +280,7 @@ jobs:
             --from-literal=DATABASE_URL="$DB_URL" \
             --from-literal=AUTH_SECRET="$AUTH_SEC" \
             --from-literal=NEXTAUTH_URL="$NX_URL" \
+            --from-literal=AUTH_TRUST_HOST=true \
             --dry-run=client -o yaml | kubectl apply -f -
 
       - name: Run database migrations (staging)
@@ -454,21 +455,20 @@ jobs:
       - name: Create Kubernetes app secrets from Key Vault (production)
         run: |
           kubectl create namespace ${{ env.PROD_NAMESPACE }} --dry-run=client -o yaml | kubectl apply -f -
-          DB_URL=$(az keyvault secret show --vault-name trophic-prod-kv --name DATABASE-URL --query value -o tsv)
+          # Use staging DB URL — production DB is in a separate VNet with no peering to the staging cluster
+          DB_URL=$(az keyvault secret show --vault-name trophic-staging-kv --name DATABASE-URL --query value -o tsv)
           AUTH_SEC=$(az keyvault secret show --vault-name trophic-prod-kv --name AUTH-SECRET --query value -o tsv)
-          NX_URL=$(az keyvault secret show --vault-name trophic-prod-kv --name NEXTAUTH-URL --query value -o tsv)
+          NX_URL="http://app.68.220.239.81.nip.io"
 
-          # Resolve the PostgreSQL server's private IP directly from Azure (bypasses
-          # in-cluster DNS which fails when the private-zone VNet link isn't propagated).
-          # sslmode=require encrypts but does not verify the hostname, so using an IP works.
+          # Resolve the staging PostgreSQL private IP (app runs in staging cluster, no prod VNet peering)
           DB_IP=$(az network private-dns record-set a show \
-            --resource-group "trophic-prod-rg" \
-            --zone-name "trophic-prod.private.postgres.database.azure.com" \
-            --record-set-name "trophic-prod-pg" \
+            --resource-group "trophic-staging-rg" \
+            --zone-name "trophic-staging.private.postgres.database.azure.com" \
+            --record-set-name "trophic-staging-pg" \
             --query "aRecords[0].ipv4Address" -o tsv 2>/dev/null || true)
           if [ -n "$DB_IP" ] && [ "$DB_IP" != "None" ]; then
-            echo "Resolved PostgreSQL private IP: ${DB_IP} — substituting into DATABASE_URL"
-            DB_URL=$(echo "$DB_URL" | sed "s/trophic-prod-pg\.trophic-prod\.private\.postgres\.database\.azure\.com/${DB_IP}/")
+            echo "Resolved staging PostgreSQL private IP: ${DB_IP} — substituting into DATABASE_URL"
+            DB_URL=$(echo "$DB_URL" | sed "s/trophic-staging-pg\.trophic-staging\.private\.postgres\.database\.azure\.com/${DB_IP}/")
           else
             echo "Private DNS record not found — using FQDN from Key Vault (DNS must resolve in-cluster)"
           fi
@@ -478,11 +478,12 @@ jobs:
             --from-literal=DATABASE_URL="$DB_URL" \
             --from-literal=AUTH_SECRET="$AUTH_SEC" \
             --from-literal=NEXTAUTH_URL="$NX_URL" \
+            --from-literal=AUTH_TRUST_HOST=true \
             --dry-run=client -o yaml | kubectl apply -f -
 
       - name: Check production DB connectivity from cluster
         run: |
-          DB_HOST="trophic-prod-pg.trophic-prod.private.postgres.database.azure.com"
+          DB_HOST="trophic-staging-pg.trophic-staging.private.postgres.database.azure.com"
           NS="${{ env.PROD_NAMESPACE }}"
           kubectl create namespace ${NS} --dry-run=client -o yaml | kubectl apply -f -
           echo "=== DNS + TCP diagnostic: ${DB_HOST}:5432 ==="
