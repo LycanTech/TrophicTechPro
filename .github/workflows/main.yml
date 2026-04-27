@@ -324,7 +324,7 @@ jobs:
             --set image.repository=${{ env.ACR_REGISTRY }}/${{ env.ACR_REPOSITORY }} \
             --set image.tag=sha-${{ github.sha }} \
             --set image.digest=${{ needs.build-push.outputs.image-digest }} \
-            --set replicaCount=2 \
+            --set replicaCount=1 \
             --set ingress.host=staging.trophictech.io \
             --set env=staging \
             --atomic \
@@ -551,14 +551,14 @@ jobs:
             --namespace ${{ env.PROD_NAMESPACE }} \
             --set image.repository=${{ env.ACR_REGISTRY }}/${{ env.ACR_REPOSITORY }} \
             --set image.tag=sha-${{ github.sha }} \
-            --set replicaCount=3 \
+            --set replicaCount=1 \
             --set ingress.host=app.trophictech.io \
             --set ingress.canary.enabled=false \
             --set env=production \
-            --set resources.requests.cpu=250m \
-            --set resources.requests.memory=256Mi \
-            --set resources.limits.cpu=500m \
-            --set resources.limits.memory=512Mi \
+            --set resources.requests.cpu=100m \
+            --set resources.requests.memory=128Mi \
+            --set resources.limits.cpu=250m \
+            --set resources.limits.memory=256Mi \
             --atomic \
             --timeout 10m
 

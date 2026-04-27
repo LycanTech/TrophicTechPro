@@ -125,11 +125,11 @@ module "database" {
   admin_username             = var.db_admin_username
   admin_password             = var.db_admin_password
   pg_version                 = "16"
-  sku_name                   = "GP_Standard_D2s_v3"
-  storage_mb                 = 65536   # 64 GB
-  ha_enabled                 = true
-  geo_redundant_backup        = true
-  backup_retention_days      = 35
+  sku_name                   = "B_Standard_B1ms"
+  storage_mb                 = 32768   # 32 GB
+  ha_enabled                 = false
+  geo_redundant_backup        = false
+  backup_retention_days      = 7
   log_analytics_workspace_id = ""                      # skip diag setting on first apply (count issue)
   tags                       = local.tags
 }
@@ -145,13 +145,11 @@ module "aks" {
   aks_app_subnet_id          = module.networking.aks_app_subnet_id
   log_analytics_workspace_id = module.monitoring.log_analytics_workspace_id
   kubernetes_version         = var.kubernetes_version
-  system_node_count          = 2
+  system_node_count          = 1
   system_node_vm_size        = "Standard_D2s_v3"
-  # Reduced to D2s_v3 × 1 to fit within training subscription's DSv3 vCPU quota (6 total).
-  # System pool consumes 4 vCPUs (2 × D2s_v3), leaving 2 for the app pool.
   app_node_vm_size           = "Standard_D2s_v3"
   app_node_min_count         = 1
-  app_node_max_count         = 3
+  app_node_max_count         = 2
   private_cluster_enabled    = true
   tags                       = local.tags
 }
