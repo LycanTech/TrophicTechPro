@@ -18,6 +18,7 @@ env:
   AKS_CLUSTER: ${{ secrets.AKS_CLUSTER }}             # AKS cluster name
   AKS_RESOURCE_GROUP: ${{ secrets.AKS_RESOURCE_GROUP }}
   HELM_RELEASE: ${{ secrets.HELM_RELEASE }}           # e.g. trophic-app
+  SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
   HELM_CHART_PATH: ./helm/app
   STAGING_NAMESPACE: staging
   PROD_NAMESPACE: production
@@ -324,7 +325,7 @@ jobs:
             --set image.repository=${{ env.ACR_REGISTRY }}/${{ env.ACR_REPOSITORY }} \
             --set image.tag=sha-${{ github.sha }} \
             --set image.digest=${{ needs.build-push.outputs.image-digest }} \
-            --set replicaCount=2 \
+            --set replicaCount=1 \
             --set ingress.host=staging.trophictech.io \
             --set env=staging \
             --atomic \
@@ -551,14 +552,14 @@ jobs:
             --namespace ${{ env.PROD_NAMESPACE }} \
             --set image.repository=${{ env.ACR_REGISTRY }}/${{ env.ACR_REPOSITORY }} \
             --set image.tag=sha-${{ github.sha }} \
-            --set replicaCount=3 \
+            --set replicaCount=1 \
             --set ingress.host=app.trophictech.io \
             --set ingress.canary.enabled=false \
             --set env=production \
-            --set resources.requests.cpu=250m \
-            --set resources.requests.memory=256Mi \
-            --set resources.limits.cpu=500m \
-            --set resources.limits.memory=512Mi \
+            --set resources.requests.cpu=100m \
+            --set resources.requests.memory=128Mi \
+            --set resources.limits.cpu=250m \
+            --set resources.limits.memory=256Mi \
             --atomic \
             --timeout 10m
 
@@ -586,7 +587,7 @@ jobs:
           echo "Production deployment healthy. HTTP $HTTP_STATUS OK."
 
       - name: Notify deployment success
-        if: success()
+        if: success() && env.SLACK_WEBHOOK_URL != ''
         continue-on-error: true
         uses: slackapi/slack-github-action@v1.26.0
         with:
@@ -595,10 +596,10 @@ jobs:
               "text": ":rocket: *Trophic Tech* — Production deployment succeeded!\n*Image:* `sha-${{ github.sha }}`\n*Actor:* ${{ github.actor }}\n*URL:* https://app.trophictech.io"
             }
         env:
-          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+          SLACK_WEBHOOK_URL: ${{ env.SLACK_WEBHOOK_URL }}
 
       - name: Notify deployment failure
-        if: failure()
+        if: failure() && env.SLACK_WEBHOOK_URL != ''
         continue-on-error: true
         uses: slackapi/slack-github-action@v1.26.0
         with:
@@ -607,4 +608,4 @@ jobs:
               "text": ":x: *Trophic Tech* — Production deployment FAILED and rolled back!\n*Image:* `sha-${{ github.sha }}`\n*Actor:* ${{ github.actor }}\n*Run:* ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
             }
         env:
-          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+          SLACK_WEBHOOK_URL: ${{ env.SLACK_WEBHOOK_URL }}

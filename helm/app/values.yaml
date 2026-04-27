@@ -8,7 +8,7 @@ image:
 imagePullSecrets: []   # AcrPull via kubelet managed identity — no pull secret needed
 
 # ── Replica & environment ─────────────────────────────────────
-replicaCount: 3
+replicaCount: 1
 env: production
 
 # ── Application environment variables ─────────────────────────
@@ -47,17 +47,17 @@ ingress:
 # ── Resources ────────────────────────────────────────────────
 resources:
   requests:
+    cpu:    100m
+    memory: 128Mi
+  limits:
     cpu:    250m
     memory: 256Mi
-  limits:
-    cpu:    500m
-    memory: 512Mi
 
 # ── HPA ──────────────────────────────────────────────────────
 autoscaling:
-  enabled: true
-  minReplicas: 3
-  maxReplicas: 10
+  enabled: false
+  minReplicas: 1
+  maxReplicas: 3
   targetCPUUtilizationPercentage: 70
   targetMemoryUtilizationPercentage: 80
 
@@ -80,8 +80,8 @@ readinessProbe:
 
 # ── Pod disruption budget ─────────────────────────────────────
 podDisruptionBudget:
-  enabled: true
-  minAvailable: 2
+  enabled: false
+  minAvailable: 1
 
 # ── Security context ─────────────────────────────────────────
 podSecurityContext:
