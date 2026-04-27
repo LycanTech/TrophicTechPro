@@ -586,7 +586,7 @@ jobs:
           echo "Production deployment healthy. HTTP $HTTP_STATUS OK."
 
       - name: Notify deployment success
-        if: success()
+        if: success() && secrets.SLACK_WEBHOOK_URL != ''
         continue-on-error: true
         uses: slackapi/slack-github-action@v1.26.0
         with:
@@ -598,7 +598,7 @@ jobs:
           SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
 
       - name: Notify deployment failure
-        if: failure()
+        if: failure() && secrets.SLACK_WEBHOOK_URL != ''
         continue-on-error: true
         uses: slackapi/slack-github-action@v1.26.0
         with:
