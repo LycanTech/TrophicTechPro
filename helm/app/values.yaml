@@ -32,7 +32,7 @@ service:
 ingress:
   enabled: true
   className: nginx
-  host: app.trophictech.io
+  host: app.4.153.186.111.nip.io
   tls:
     enabled: true
     secretName: trophic-tls
