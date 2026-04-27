@@ -344,7 +344,6 @@ jobs:
             --set replicaCount=1 \
             --set ingress.host=staging.68.220.239.81.nip.io \
             --set ingress.tls.enabled=false \
-            --set "ingress.annotations.nginx\.ingress\.kubernetes\.io/ssl-redirect=false" \
             --set env=staging \
             --timeout 10m
 
@@ -562,7 +561,6 @@ jobs:
             --set replicaCount=1 \
             --set ingress.host=app.68.220.239.81.nip.io \
             --set ingress.tls.enabled=false \
-            --set "ingress.annotations.nginx\.ingress\.kubernetes\.io/ssl-redirect=false" \
             --set env=production \
             --set resources.requests.cpu=100m \
             --set resources.requests.memory=128Mi \
