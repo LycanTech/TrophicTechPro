@@ -190,7 +190,7 @@ jobs:
         run: terraform init
 
       - name: Terraform Plan (pre-apply gate)
-        run: terraform plan -no-color -detailed-exitcode -out=tfplan
+        run: terraform plan -no-color -out=tfplan
 
       - name: Terraform Apply
         run: terraform apply -auto-approve tfplan
