@@ -42,7 +42,7 @@ variable "auth_secret" {
 
 variable "app_hostname" {
   type    = string
-  default = "app.trophic.io"
+  default = "app.4.153.186.111.nip.io"
 }
 
 variable "alert_email" {

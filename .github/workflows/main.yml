@@ -222,7 +222,7 @@ jobs:
     needs: build-push
     environment:
       name: staging
-      url: https://staging.trophictech.io
+      url: https://staging.4.153.186.111.nip.io
 
     permissions:
       id-token: write
@@ -342,7 +342,7 @@ jobs:
             --set image.tag=sha-${{ github.sha }} \
             --set image.digest=${{ needs.build-push.outputs.image-digest }} \
             --set replicaCount=1 \
-            --set ingress.host=staging.trophictech.io \
+            --set ingress.host=staging.4.153.186.111.nip.io \
             --set env=staging \
             --timeout 10m
 
@@ -361,7 +361,7 @@ jobs:
       - name: Run smoke tests against staging
         continue-on-error: true   # requires nginx-ingress + DNS — not set up in this environment
         run: |
-          STAGING_URL="https://staging.trophictech.io"
+          STAGING_URL="https://staging.4.153.186.111.nip.io"
           echo "Running smoke test against $STAGING_URL"
           curl --fail --retry 3 --retry-delay 10 --retry-all-errors \
             "$STAGING_URL/api/health" | jq -e '.status == "ok"'
@@ -391,7 +391,7 @@ jobs:
     if: github.ref == 'refs/heads/main'
     environment:
       name: production
-      url: https://app.trophictech.io
+      url: https://app.4.153.186.111.nip.io
 
     permissions:
       id-token: write
@@ -558,7 +558,7 @@ jobs:
             --set image.repository=${{ env.ACR_REGISTRY }}/${{ env.ACR_REPOSITORY }} \
             --set image.tag=sha-${{ github.sha }} \
             --set replicaCount=1 \
-            --set ingress.host=app.trophictech.io \
+            --set ingress.host=app.4.153.186.111.nip.io \
             --set env=production \
             --set resources.requests.cpu=100m \
             --set resources.requests.memory=128Mi \
@@ -576,7 +576,7 @@ jobs:
       - name: Production health check & rollback guard
         continue-on-error: true   # requires nginx-ingress + DNS — not set up in this environment
         run: |
-          PROD_URL="https://app.trophictech.io"
+          PROD_URL="https://app.4.153.186.111.nip.io"
           HTTP_STATUS=$(curl -o /dev/null -s -w "%{http_code}" "$PROD_URL/api/health")
           if [ "$HTTP_STATUS" -ne 200 ]; then
             echo "Health check FAILED (HTTP $HTTP_STATUS) — DNS/ingress not configured yet."
@@ -591,7 +591,7 @@ jobs:
         with:
           payload: |
             {
-              "text": ":rocket: *Trophic Tech* — Production deployment succeeded!\n*Image:* `sha-${{ github.sha }}`\n*Actor:* ${{ github.actor }}\n*URL:* https://app.trophictech.io"
+              "text": ":rocket: *Trophic Tech* — Production deployment succeeded!\n*Image:* `sha-${{ github.sha }}`\n*Actor:* ${{ github.actor }}\n*URL:* https://app.4.153.186.111.nip.io"
             }
         env:
           SLACK_WEBHOOK_URL: ${{ env.SLACK_WEBHOOK_URL }}
