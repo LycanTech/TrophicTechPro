@@ -455,6 +455,26 @@ jobs:
             --from-literal=NEXTAUTH_URL="$NX_URL" \
             --dry-run=client -o yaml | kubectl apply -f -
 
+      - name: Check production DB connectivity from cluster
+        run: |
+          DB_HOST="trophic-prod-pg.trophic-prod.private.postgres.database.azure.com"
+          NS="${{ env.PROD_NAMESPACE }}"
+          kubectl create namespace ${NS} --dry-run=client -o yaml | kubectl apply -f -
+          echo "=== DNS + TCP diagnostic: ${DB_HOST}:5432 ==="
+          kubectl run pg-diag-${{ github.run_id }} \
+            --image=busybox:1.36 \
+            --restart=Never \
+            --rm \
+            -n ${NS} \
+            --timeout=90s \
+            --overrides='{"spec":{"dnsPolicy":"None","dnsConfig":{"nameservers":["168.63.129.16"]}}}' \
+            -- sh -c "
+              echo '--- DNS (via Azure DNS 168.63.129.16) ---';
+              nslookup ${DB_HOST} 168.63.129.16 2>&1 || echo DNS_FAILED;
+              echo '--- TCP 5432 ---';
+              nc -zv -w5 ${DB_HOST} 5432 2>&1 && echo TCP_OK || echo TCP_FAILED
+            " 2>&1 || echo "=== Diagnostic pod finished (check output above) ==="
+
       - name: Run database migrations (production)
         run: |
           IMAGE="${{ env.ACR_REGISTRY }}/${{ env.ACR_REPOSITORY }}:sha-${{ github.sha }}"
@@ -468,10 +488,14 @@ jobs:
             namespace: ${NS}
           spec:
             ttlSecondsAfterFinished: 300
-            backoffLimit: 0
+            backoffLimit: 2
             template:
               spec:
                 restartPolicy: Never
+                dnsPolicy: "None"
+                dnsConfig:
+                  nameservers:
+                  - 168.63.129.16
                 containers:
                 - name: migrator
                   image: ${IMAGE}
