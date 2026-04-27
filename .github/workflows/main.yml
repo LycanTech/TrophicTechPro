@@ -440,6 +440,22 @@ jobs:
           DB_URL=$(az keyvault secret show --vault-name trophic-prod-kv --name DATABASE-URL --query value -o tsv)
           AUTH_SEC=$(az keyvault secret show --vault-name trophic-prod-kv --name AUTH-SECRET --query value -o tsv)
           NX_URL=$(az keyvault secret show --vault-name trophic-prod-kv --name NEXTAUTH-URL --query value -o tsv)
+
+          # Resolve the PostgreSQL server's private IP directly from Azure (bypasses
+          # in-cluster DNS which fails when the private-zone VNet link isn't propagated).
+          # sslmode=require encrypts but does not verify the hostname, so using an IP works.
+          DB_IP=$(az network private-dns record-set a show \
+            --resource-group "trophic-prod-rg" \
+            --zone-name "trophic-prod.private.postgres.database.azure.com" \
+            --record-set-name "trophic-prod-pg" \
+            --query "aRecords[0].ipv4Address" -o tsv 2>/dev/null || true)
+          if [ -n "$DB_IP" ] && [ "$DB_IP" != "None" ]; then
+            echo "Resolved PostgreSQL private IP: ${DB_IP} — substituting into DATABASE_URL"
+            DB_URL=$(echo "$DB_URL" | sed "s/trophic-prod-pg\.trophic-prod\.private\.postgres\.database\.azure\.com/${DB_IP}/")
+          else
+            echo "Private DNS record not found — using FQDN from Key Vault (DNS must resolve in-cluster)"
+          fi
+
           kubectl create secret generic trophic-mc-secrets \
             --namespace ${{ env.PROD_NAMESPACE }} \
             --from-literal=DATABASE_URL="$DB_URL" \
