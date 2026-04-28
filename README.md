@@ -24,6 +24,17 @@
 
 ---
 
+## Live URLs
+
+| Service | URL | Credentials |
+| --- | --- | --- |
+| **Mission Control app** | <http://app.68.220.239.81.nip.io> | `chikwex@trophictech.io` / `demo1234` |
+| **Grafana monitoring** | <http://grafana.app.68.220.239.81.nip.io> | `admin` / `trophic2024` |
+
+Both services are served over HTTP (TLS not yet configured) from the nginx-ingress LoadBalancer on AKS at `68.220.239.81`.
+
+---
+
 ## Overview
 
 Mission Control is a full-stack Next.js 15 application built for Trophic Tech engineers. It provides a real-time view of deployment activity across all client projects, with live metric animations, a searchable command palette, configurable pipeline filters, and one-click deployment triggering.
@@ -124,10 +135,13 @@ npm run dev
 
 **Demo credentials** (seeded automatically):
 
-| Email                    | Password    | Role     |
-|--------------------------|-------------|----------|
-| admin@trophictech.io     | Admin123!   | admin    |
-| engineer@trophictech.io  | Engineer1!  | engineer |
+| Email                          | Password   | Role     |
+|--------------------------------|------------|----------|
+| `chikwex@trophictech.io`       | `demo1234` | admin    |
+| `admin@trophictech.io`         | `demo1234` | admin    |
+| `jamie@trophictech.io`         | `demo1234` | engineer |
+| `priya@trophictech.io`         | `demo1234` | engineer |
+| `client@nordstrom.com`         | `demo1234` | viewer   |
 
 ---
 
@@ -143,10 +157,13 @@ DATABASE_URL="postgresql://postgres:password@localhost:5432/trophic_mc"
 AUTH_SECRET="replace-with-32-char-random-string"
 NEXTAUTH_URL="http://localhost:3000"
 
-# (Production — injected from Key Vault via Workload Identity)
-# DATABASE_URL  → Key Vault secret: DATABASE-URL
-# AUTH_SECRET   → Key Vault secret: AUTH-SECRET
-# NEXTAUTH_URL  → Key Vault secret: NEXTAUTH-URL
+# Required for Auth.js behind a reverse proxy / load balancer
+AUTH_TRUST_HOST=true
+
+# (Production — injected by the CI/CD workflow from Azure Key Vault)
+# DATABASE_URL  → trophic-staging-kv: DATABASE-URL
+# AUTH_SECRET   → trophic-prod-kv:    AUTH-SECRET
+# NEXTAUTH_URL  → hardcoded in workflow to http://app.68.220.239.81.nip.io
 ```
 
 Generate a strong `AUTH_SECRET`:
@@ -339,22 +356,52 @@ terraform init && terraform apply
 
 ---
 
+## Monitoring & Observability
+
+| Tool          | URL                                       | Credentials             |
+|---------------|-------------------------------------------|-------------------------|
+| Grafana       | <http://grafana.app.68.220.239.81.nip.io> | `admin` / `trophic2024` |
+| Azure Monitor | Azure Portal → Monitor                    | Azure RBAC              |
+
+Grafana is deployed via Helm to the `monitoring` namespace on the same AKS cluster.
+
+### Data sources configured
+
+| Name          | Type                                | What it shows                                               |
+|---------------|-------------------------------------|-------------------------------------------------------------|
+| Azure Monitor | `grafana-azure-monitor-datasource`  | AKS CPU/memory/pod-ready, PostgreSQL CPU, Log Analytics KQL |
+| TestData      | `grafana-testdata-datasource`       | Synthetic data for building and testing panels              |
+
+The `grafana-reader` service principal has **Monitoring Reader** (subscription-scope) and **Log Analytics Reader** (workspace-scope) — read-only access. Log Analytics workspace: `trophic-staging-law` (resource group `trophic-staging-rg`).
+
+### Azure Monitor alerts (Terraform-managed)
+
+| Alert              | Threshold         | Severity |
+|--------------------|-------------------|----------|
+| AKS node CPU       | > 80% for 15 min  | P2       |
+| AKS node memory    | > 85% for 15 min  | P2       |
+| AKS pods not ready | > 0 for 5 min     | P1       |
+| PostgreSQL CPU     | > 80% for 10 min  | P2       |
+
+---
+
 ## Deployment (Helm / AKS)
 
 The Helm chart lives in [`helm/app/`](helm/app/).
 
 ### Key values
 
-| Value                  | Default                              | Description                         |
-|------------------------|--------------------------------------|-------------------------------------|
-| `image.repository`     | `trophictech.azurecr.io/mission-control` | ACR image path                  |
-| `image.tag`            | `latest`                             | Overridden by CI with commit SHA    |
-| `replicaCount`         | `3`                                  | Pod replicas                        |
-| `existingSecret`       | `trophic-mc-secrets`                 | K8s Secret with DATABASE_URL etc.   |
-| `ingress.host`         | `app.trophictech.io`                 | Public hostname                     |
-| `hpa.minReplicas`      | `3`                                  | HPA lower bound                     |
-| `hpa.maxReplicas`      | `10`                                 | HPA upper bound                     |
-| `ingress.canary.enabled` | `false`                            | Toggle canary ingress in CI         |
+| Value                      | Default                                    | Description                      |
+|----------------------------|--------------------------------------------|----------------------------------|
+| `image.repository`         | `trophictech.azurecr.io/mission-control`   | ACR image path                   |
+| `image.tag`                | `latest`                                   | Overridden by CI with commit SHA |
+| `replicaCount`             | `1`                                        | Pod replicas                     |
+| `existingSecret`           | `trophic-mc-secrets`                       | K8s Secret with DATABASE_URL     |
+| `ingress.host`             | `app.68.220.239.81.nip.io`                 | Public hostname                  |
+| `autoscaling.enabled`      | `false`                                    | HPA on/off                       |
+| `autoscaling.minReplicas`  | `1`                                        | HPA lower bound                  |
+| `autoscaling.maxReplicas`  | `3`                                        | HPA upper bound                  |
+| `ingress.canary.enabled`   | `false`                                    | Toggle canary ingress in CI      |
 
 ### Manual deploy
 

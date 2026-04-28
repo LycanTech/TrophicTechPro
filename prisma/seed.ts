@@ -11,6 +11,13 @@ async function main() {
     skipDuplicates: true,
     data: [
       {
+        id: "usr_chikwex",
+        email: "chikwex@trophictech.io",
+        name: "Chikwex Zingy",
+        password: HASH("demo1234"),
+        role: "admin",
+      },
+      {
         id: "usr_admin",
         email: "admin@trophictech.io",
         name: "Alex Mercer",

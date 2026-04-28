@@ -46,13 +46,14 @@ graph TD
         N -->|complete| O[🟢 Full Production Rollout\nHelm atomic · 3 replicas · 10m]
         O --> P[🧹 Canary Cleanup\nHelm uninstall canary]
         P --> Q{✅ Production\nHealth Check\n/api/health · HTTP 200}
-        Q -->|pass| R([🎉 Deployment Complete\nhttps://app.trophictech.io])
+        Q -->|pass| R([🎉 Deployment Complete\nhttp://app.68.220.239.81.nip.io])
         Q -->|fail — continue| R
     end
 
     subgraph OBS ["📡 Observability"]
         R --> S[📊 Azure Monitor\nAKS metrics · alerts]
         R --> T[💬 Slack Notification\nDeploy success/failure]
+        R --> U[📈 Grafana\ngrafana.app.68.220.239.81.nip.io]
     end
 
     style A fill:#1c1c1e,stroke:#0a84ff,stroke-width:2px,color:#fff
