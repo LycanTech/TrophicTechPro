@@ -309,7 +309,7 @@ jobs:
                 - name: migrator
                   image: ${IMAGE}
                   workingDir: /app
-                  command: ["node", "node_modules/prisma/build/index.js", "migrate", "deploy"]
+                  command: ["sh", "-c", "node node_modules/prisma/build/index.js migrate deploy && node prisma/seed.mjs"]
                   envFrom:
                   - secretRef:
                       name: trophic-mc-secrets
@@ -333,6 +333,16 @@ jobs:
             fi
             sleep 10
           done
+
+      - name: Install nginx-ingress controller (staging)
+        run: |
+          helm repo add ingress-nginx https://kubernetes.github.io/ingress-nginx --force-update
+          helm repo update ingress-nginx
+          helm upgrade --install ingress-nginx ingress-nginx/ingress-nginx \
+            --namespace ingress-nginx \
+            --create-namespace \
+            --set controller.service.type=LoadBalancer \
+            --wait --timeout 5m
 
       - name: Deploy to staging via Helm
         run: |
@@ -361,7 +371,6 @@ jobs:
           kubectl describe pods -n ${{ env.STAGING_NAMESPACE }} 2>/dev/null | tail -80 || true
 
       - name: Run smoke tests against staging
-        continue-on-error: true   # requires nginx-ingress + DNS — not set up in this environment
         run: |
           STAGING_URL="http://staging.68.220.239.81.nip.io"
           echo "Running smoke test against $STAGING_URL"
@@ -527,7 +536,7 @@ jobs:
                 - name: migrator
                   image: ${IMAGE}
                   workingDir: /app
-                  command: ["node", "node_modules/prisma/build/index.js", "migrate", "deploy"]
+                  command: ["sh", "-c", "node node_modules/prisma/build/index.js migrate deploy && node prisma/seed.mjs"]
                   envFrom:
                   - secretRef:
                       name: trophic-mc-secrets
@@ -551,6 +560,16 @@ jobs:
             fi
             sleep 10
           done
+
+      - name: Install nginx-ingress controller (production)
+        run: |
+          helm repo add ingress-nginx https://kubernetes.github.io/ingress-nginx --force-update
+          helm repo update ingress-nginx
+          helm upgrade --install ingress-nginx ingress-nginx/ingress-nginx \
+            --namespace ingress-nginx \
+            --create-namespace \
+            --set controller.service.type=LoadBalancer \
+            --wait --timeout 5m
 
       - name: Deploy to production via Helm
         run: |
@@ -577,12 +596,11 @@ jobs:
           echo "=== Events ===" && kubectl get events -n ${{ env.PROD_NAMESPACE }} --sort-by='.lastTimestamp' 2>/dev/null | tail -30 || true
 
       - name: Production health check & rollback guard
-        continue-on-error: true   # requires nginx-ingress + DNS — not set up in this environment
         run: |
           PROD_URL="http://app.68.220.239.81.nip.io"
-          HTTP_STATUS=$(curl -o /dev/null -s -w "%{http_code}" --max-time 10 "$PROD_URL/api/health")
+          HTTP_STATUS=$(curl -o /dev/null -s -w "%{http_code}" --max-time 15 --retry 5 --retry-delay 10 --retry-all-errors "$PROD_URL/api/health")
           if [ "$HTTP_STATUS" -ne 200 ]; then
-            echo "Health check FAILED (HTTP $HTTP_STATUS) — DNS/ingress not configured yet."
+            echo "Health check FAILED (HTTP $HTTP_STATUS)"
             exit 1
           fi
           echo "Production deployment healthy. HTTP $HTTP_STATUS OK."
