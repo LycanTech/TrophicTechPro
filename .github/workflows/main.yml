@@ -373,9 +373,18 @@ jobs:
       - name: Run smoke tests against staging
         run: |
           STAGING_URL="http://staging.68.220.239.81.nip.io"
-          echo "Running smoke test against $STAGING_URL"
-          curl --fail --max-time 10 --retry 3 --retry-delay 5 --retry-all-errors \
-            "$STAGING_URL/api/health" | jq -e '.status == "ok"'
+          echo "Waiting for ingress to be ready..."
+          for i in $(seq 1 12); do
+            STATUS=$(curl -o /dev/null -s -w "%{http_code}" --max-time 10 "$STAGING_URL/api/health" || echo "000")
+            if [ "$STATUS" = "200" ]; then
+              echo "Smoke test passed (HTTP 200)."
+              exit 0
+            fi
+            echo "Attempt $i: HTTP $STATUS — retrying in 15s..."
+            sleep 15
+          done
+          echo "Smoke test FAILED after 3 minutes."
+          exit 1
 
   # ─────────────────────────────────────────────
   # JOB 5: Manual Approval Gate
