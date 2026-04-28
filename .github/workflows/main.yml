@@ -372,19 +372,20 @@ jobs:
 
       - name: Run smoke tests against staging
         run: |
-          STAGING_URL="http://staging.68.220.239.81.nip.io"
-          echo "Waiting for ingress to be ready..."
-          for i in $(seq 1 12); do
-            STATUS=$(curl -o /dev/null -s -w "%{http_code}" --max-time 10 "$STAGING_URL/api/health" || echo "000")
-            if [ "$STATUS" = "200" ]; then
-              echo "Smoke test passed (HTTP 200)."
-              exit 0
-            fi
-            echo "Attempt $i: HTTP $STATUS — retrying in 15s..."
-            sleep 15
-          done
-          echo "Smoke test FAILED after 3 minutes."
-          exit 1
+          NS="${{ env.STAGING_NAMESPACE }}"
+          echo "Waiting for staging pod to be Ready..."
+          kubectl wait pod -n "$NS" \
+            -l "app.kubernetes.io/name=trophic-mission-control" \
+            --for=condition=Ready \
+            --timeout=180s
+          POD=$(kubectl get pods -n "$NS" \
+            -l "app.kubernetes.io/name=trophic-mission-control" \
+            --field-selector=status.phase=Running \
+            -o jsonpath='{.items[0].metadata.name}')
+          echo "Running smoke test inside pod $POD..."
+          kubectl exec -n "$NS" "$POD" -- \
+            curl -sf http://localhost:3000/api/health | grep -q '"status":"ok"'
+          echo "Smoke test passed."
 
   # ─────────────────────────────────────────────
   # JOB 5: Manual Approval Gate
