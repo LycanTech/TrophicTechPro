@@ -607,13 +607,20 @@ jobs:
 
       - name: Production health check & rollback guard
         run: |
-          PROD_URL="http://app.68.220.239.81.nip.io"
-          HTTP_STATUS=$(curl -o /dev/null -s -w "%{http_code}" --max-time 15 --retry 5 --retry-delay 10 --retry-all-errors "$PROD_URL/api/health")
-          if [ "$HTTP_STATUS" -ne 200 ]; then
-            echo "Health check FAILED (HTTP $HTTP_STATUS)"
-            exit 1
-          fi
-          echo "Production deployment healthy. HTTP $HTTP_STATUS OK."
+          NS="${{ env.PROD_NAMESPACE }}"
+          echo "Waiting for production pod to be Ready..."
+          kubectl wait pod -n "$NS" \
+            -l "app.kubernetes.io/name=trophic-mission-control" \
+            --for=condition=Ready \
+            --timeout=180s
+          POD=$(kubectl get pods -n "$NS" \
+            -l "app.kubernetes.io/name=trophic-mission-control" \
+            --field-selector=status.phase=Running \
+            -o jsonpath='{.items[0].metadata.name}')
+          echo "Running health check inside pod $POD..."
+          kubectl exec -n "$NS" "$POD" -- \
+            curl -sf http://localhost:3000/api/health | grep -q '"status":"ok"'
+          echo "Production deployment healthy."
 
       - name: Notify deployment success
         if: success() && env.SLACK_WEBHOOK_URL != ''
