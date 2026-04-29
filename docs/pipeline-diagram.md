@@ -3,16 +3,17 @@
 ## Branch Strategy
 
 ```text
-feature/* ──► staging (push) ──► Jobs 1–4  (Security → Tests → Build → Deploy Staging)
-                                      │
-                              PR merge to main
-                                      │
-                                      ▼
-                       main (push) ──► Jobs 1–6 (+ Approval Gate → Deploy Production)
+dev / feature/* ──► push to dev ──► Jobs 1–4  (Security → Tests → Build → Deploy Staging)
+                                         │
+                                 PR merge to main
+                                         │
+                                         ▼
+                          main (push) ──► Jobs 1–6 (+ Approval Gate → Deploy Production)
 ```
 
-Pushing to `staging` runs the full CI suite and deploys to the staging namespace.
-Merging a PR from `staging` → `main` triggers the complete pipeline through to production.
+All three branches (`main`, `staging`, `dev`) trigger Jobs 1–4.
+Pushing to `dev` runs the full CI suite and deploys to the staging namespace.
+Merging a PR from `dev` → `main` triggers the complete pipeline through to production.
 
 ## End-to-End Flow: Code Push → AKS Production
 
@@ -37,7 +38,7 @@ graph TD
         H --> I[🗄️ Prisma Migrations\nbatch/v1 Job · polling loop]
         I -->|complete| J[🟡 Staging Deployment\nHelm atomic · 10m timeout\nreplicas: 2]
         I -->|failed| ERR3[❌ Migration failed\npod logs streamed to run]
-        J --> K[🩺 Smoke Test\n/api/health endpoint]
+        J --> K[🩺 Smoke Test\nkubectl exec · /api/health]
         K -->|main branch only| L{🔐 Manual Approval Gate\nGitHub Environment Review\nRequired Reviewer}
         K -->|staging branch| END2([✅ Staging deploy complete])
         L -->|approved| M[🐦 Canary Deployment\n20% traffic · 1 replica · 30s soak\nAKS prod ns]
@@ -45,7 +46,7 @@ graph TD
         M -->|healthy| N[🗄️ Prisma Migrations\nproduction namespace]
         N -->|complete| O[🟢 Full Production Rollout\nHelm atomic · 3 replicas · 10m]
         O --> P[🧹 Canary Cleanup\nHelm uninstall canary]
-        P --> Q{✅ Production\nHealth Check\n/api/health · HTTP 200}
+        P --> Q{✅ Production\nHealth Check\nkubectl exec · status:ok}
         Q -->|pass| R([🎉 Deployment Complete\nhttp://app.68.220.239.81.nip.io])
         Q -->|fail — continue| R
     end
@@ -79,15 +80,17 @@ graph TD
 | Docker Build | BuildKit (cached) | < 3 min | Block build |
 | Image Scan | Trivy (image) | < 2 min | SARIF to Security tab (non-blocking) |
 | Push to ACR | Docker push | < 2 min | Block pipeline |
-| DB Migration (staging) | Prisma K8s Job | < 4 min | Fail with pod logs |
+| nginx-ingress install | Helm (`externalTrafficPolicy=Local`) | < 5 min | Block deploy |
+| DB Migration + Seed (staging) | Prisma K8s Job + `seed.mjs` | < 4 min | Fail with pod logs |
 | Staging Deploy | Helm atomic | < 10 min | `--atomic` auto-rollback |
-| Smoke Test | curl /api/health | < 1 min | Non-blocking (DNS/ingress optional) |
+| Smoke Test | `kubectl exec` → `/api/health` | < 3 min | Block pipeline |
 | Approval Gate | GitHub Env Review | Manual | Halt pipeline |
 | PostgreSQL check | az postgres show | < 5 min | Fail if not Ready |
-| DB Migration (prod) | Prisma K8s Job | < 4 min | Fail with pod logs |
+| nginx-ingress install (prod) | Helm (`externalTrafficPolicy=Local`) | < 5 min | Block deploy |
+| DB Migration + Seed (prod) | Prisma K8s Job + `seed.mjs` | < 4 min | Fail with pod logs |
 | Canary (20%) | Helm + NGINX | 30 s soak | `--atomic` auto-rollback |
 | Prod Deploy | Helm atomic | < 10 min | `--atomic` auto-rollback |
-| Health Check | curl /api/health | < 1 min | Non-blocking (DNS/ingress optional) |
+| Health Check | `kubectl exec` → `/api/health` | < 3 min | Block pipeline |
 | Slack Notify | Slack webhook | < 10 s | Non-blocking |
 
 ## Required GitHub Secrets
