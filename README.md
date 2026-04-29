@@ -259,16 +259,19 @@ The pipeline is defined in [`.github/workflows/main.yml`](.github/workflows/main
 ### Branch strategy
 
 ```text
-feature/* ──► staging (push) ──► Jobs 1–4 only (Security → Tests → Build → Deploy Staging)
-                                      │
-                              PR merge to main
-                                      │
-                                      ▼
-                             main (push) ──► Jobs 1–6 (full pipeline, including Approval Gate → Production)
+dev / feature/* ──► push to dev ──► Jobs 1–4  (Security → Tests → Build → Deploy Staging)
+                                         │
+                                 PR merge to main
+                                         │
+                                         ▼
+                          main (push) ──► Jobs 1–6 (full pipeline, including Approval Gate → Production)
 ```
 
-- Merging a PR from `staging` → `main` is the gate that triggers the full production pipeline.
-- `workflow_dispatch` can trigger any job manually on either branch from the Actions tab.
+All three branches (`main`, `staging`, `dev`) trigger Jobs 1–4. Only `main` additionally runs the Approval Gate and Production deploy (Jobs 5–6).
+
+- Active development happens on `dev`; every push deploys to the staging namespace and validates the full CI suite.
+- Merging a PR from `dev` → `main` is the gate that triggers the full production pipeline.
+- `workflow_dispatch` can trigger the pipeline manually on any branch from the Actions tab.
 
 ### Jobs
 
@@ -276,18 +279,20 @@ feature/* ──► staging (push) ──► Jobs 1–4 only (Security → Tests
 | --- | --- | --- | --- |
 | 1 | `security-scan` | every push / PR | ESLint SARIF → GitHub Security tab; Trivy FS secret + vuln scan |
 | 2 | `test` | every push / PR | Jest with Postgres 16 service container; Codecov upload |
-| 3 | `build-push` | `main` or `staging` push | BuildKit → ACR (sha tag + `latest` on `main`); Trivy image scan + SBOM |
-| 4 | `deploy-staging` | after `build-push` | Pulls KV secrets → K8s Secret; runs Prisma `migrate deploy` as a K8s Job; `helm upgrade --atomic --timeout 10m` to `staging` namespace; smoke test on `/api/health` |
+| 3 | `build-push` | `main`, `staging`, or `dev` push | BuildKit → ACR (sha tag + `latest` on `main`); Trivy image scan + SBOM |
+| 4 | `deploy-staging` | after `build-push` | Installs nginx-ingress (`externalTrafficPolicy=Local`); pulls KV secrets → K8s Secret; runs Prisma `migrate deploy` + `seed.mjs` as a K8s Job; `helm upgrade --atomic --timeout 10m` to `staging` namespace; smoke test via `kubectl exec` into the pod |
 | 5 | `approval-gate` | `main` only | Pauses pipeline at the `production-approval` GitHub Environment — a required reviewer must approve |
-| 6 | `deploy-production` | `main` only, after approval | Checks PostgreSQL is `Ready` (auto-starts if `Stopped`); pulls KV secrets; runs Prisma migrations; canary deploy (20% weight, 1 replica, 30 s soak) → full rollout (3 replicas) → canary cleanup; Slack success/failure notification |
+| 6 | `deploy-production` | `main` only, after approval | Checks PostgreSQL is `Ready` (auto-starts if `Stopped`); installs nginx-ingress; pulls KV secrets; runs Prisma migrations + seed; canary deploy (20% weight, 1 replica, 30 s soak) → full rollout (3 replicas) → canary cleanup; in-cluster health check via `kubectl exec`; Slack success/failure notification |
 
-### Database migrations
+### Database migrations and seeding
 
 Both staging and production runs execute Prisma migrations as a Kubernetes `batch/v1 Job` **before** every Helm deploy. The job uses the same Docker image being deployed and runs:
 
 ```sh
-node node_modules/prisma/build/index.js migrate deploy
+node node_modules/prisma/build/index.js migrate deploy && node prisma/seed.mjs
 ```
+
+`seed.mjs` is a standalone ES module (no `bcryptjs` or `tsx` required — only `@prisma/client`) that upserts the five demo users and six projects idempotently. Deployments are only seeded on the first run; subsequent runs detect existing rows and skip. This means re-seeding is safe at any point.
 
 The workflow polls the job every 10 s and streams pod logs to the run output on failure. `ttlSecondsAfterFinished: 300` cleans up completed jobs automatically.
 
@@ -330,14 +335,27 @@ Terraform modules live in [`infrastructure/terraform/`](infrastructure/terraform
 
 ### Modules
 
-| Module        | Resources                                                              |
-|---------------|------------------------------------------------------------------------|
-| `networking`  | VNet, 4 subnets (AKS, DB, PE, app), NSGs, PostgreSQL delegation       |
-| `aks`         | AKS cluster, system + app node pools, OIDC issuer, Workload Identity, Key Vault CSI driver, patch auto-upgrade |
-| `acr`         | Azure Container Registry (private, admin disabled), private endpoint, private DNS zone |
-| `database`    | PostgreSQL Flexible Server v16, zone-redundant HA (prod), TLS 1.2, `prevent_destroy` lifecycle |
-| `keyvault`    | Key Vault with RBAC auth, 3 secrets, role assignments for deployer + AKS workload identity |
-| `monitoring`  | Log Analytics, ContainerInsights, action group, 4 metric alerts (CPU, memory, pods-not-ready, PG CPU) |
+| Module | Resources |
+| --- | --- |
+| `networking` | VNet, 4 subnets (AKS system/app, DB, PE), NSGs per subnet, PostgreSQL delegation |
+| `aks` | AKS cluster, system + app node pools, OIDC issuer, Workload Identity, Key Vault CSI driver |
+| `acr` | Azure Container Registry (private, admin disabled), private endpoint, private DNS zone |
+| `database` | PostgreSQL Flexible Server v16, zone-redundant HA (prod), TLS 1.2, `prevent_destroy` lifecycle |
+| `keyvault` | Key Vault with RBAC auth, 3 secrets, role assignments for deployer + AKS workload identity |
+| `monitoring` | Log Analytics, ContainerInsights, action group, 4 metric alerts (CPU, memory, pods-not-ready, PG CPU) |
+
+### NSG configuration (important)
+
+The AKS cluster uses two node pools on separate subnets, each with its own NSG:
+
+| NSG | Subnet | Required inbound rules |
+| --- | --- | --- |
+| `trophic-staging-nsg-aks-app` | `10.0.4.0/22` (app pool) | Allow Internet → `*` on 80, 443 (priority 200) and 30000–32767 (priority 150) |
+| `trophic-staging-nsg-aks-system` | `10.0.0.0/22` (system pool) | Same rules required — Azure LB health probes pass both nodes as healthy and distributes traffic across both nodepools |
+
+The nginx-ingress controller is installed by CI with `externalTrafficPolicy=Local`, which instructs the Azure LB to only route traffic to nodes where the ingress pod is actually running (app pool). This prevents the system nodepool from receiving user traffic even if the NSG rules above are absent.
+
+> **After `terraform destroy` + re-apply:** The NSG rules are provisioned by Terraform. The `externalTrafficPolicy=Local` setting is applied by the CI workflow on every nginx-ingress install — no manual step needed.
 
 ### Environments
 
