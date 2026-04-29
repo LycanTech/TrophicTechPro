@@ -1,0 +1,1342 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Trophic Tech — Mission Control · Project Report</title>
+<style>
+  /* ─── Reset & Base ─────────────────────────────────────────────────── */
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg:          #000000;
+    --bg-elevated: #1c1c1e;
+    --bg-card:     #2c2c2e;
+    --bg-inset:    #3a3a3c;
+    --separator:   rgba(255,255,255,0.08);
+    --text:        #f5f5f7;
+    --text-sub:    #a1a1a6;
+    --text-dim:    #636366;
+    --blue:        #0a84ff;
+    --blue-dim:    rgba(10,132,255,0.15);
+    --green:       #30d158;
+    --green-dim:   rgba(48,209,88,0.12);
+    --orange:      #ff9f0a;
+    --orange-dim:  rgba(255,159,10,0.12);
+    --red:         #ff453a;
+    --red-dim:     rgba(255,69,58,0.12);
+    --purple:      #bf5af2;
+    --purple-dim:  rgba(191,90,242,0.12);
+    --radius-sm:   8px;
+    --radius:      14px;
+    --radius-lg:   20px;
+  }
+
+  html { font-size: 16px; -webkit-font-smoothing: antialiased; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", Arial, sans-serif;
+    line-height: 1.6;
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 0 32px 80px;
+  }
+
+  /* ─── Typography ───────────────────────────────────────────────────── */
+  h1, h2, h3, h4 {
+    font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Helvetica Neue", Arial, sans-serif;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    color: var(--text);
+  }
+  h1 { font-size: 3rem;   line-height: 1.05; letter-spacing: -0.04em; }
+  h2 { font-size: 1.75rem; line-height: 1.2;  margin-bottom: 20px; }
+  h3 { font-size: 1.2rem;  line-height: 1.3;  margin-bottom: 12px; font-weight: 600; }
+  h4 { font-size: 0.95rem; letter-spacing: 0.06em; text-transform: uppercase;
+       color: var(--text-dim); font-weight: 600; margin-bottom: 10px; }
+
+  p  { color: var(--text-sub); line-height: 1.75; margin-bottom: 14px; }
+  p:last-child { margin-bottom: 0; }
+
+  a  { color: var(--blue); text-decoration: none; }
+  a:hover { text-decoration: underline; }
+
+  code {
+    font-family: "SF Mono", "Fira Code", "Cascadia Code", Menlo, monospace;
+    font-size: 0.85em;
+    background: var(--bg-card);
+    color: var(--blue);
+    padding: 2px 7px;
+    border-radius: 5px;
+    border: 1px solid var(--separator);
+  }
+
+  pre {
+    background: var(--bg-elevated);
+    border: 1px solid var(--separator);
+    border-radius: var(--radius);
+    padding: 20px 24px;
+    overflow-x: auto;
+    margin: 20px 0;
+    font-family: "SF Mono", "Fira Code", Menlo, monospace;
+    font-size: 0.82rem;
+    line-height: 1.65;
+    color: #e5e5ea;
+  }
+  pre code { background: none; border: none; padding: 0; color: inherit; }
+
+  /* ─── Layout ───────────────────────────────────────────────────────── */
+  .section {
+    margin: 72px 0;
+  }
+
+  .section-label {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--blue);
+    margin-bottom: 12px;
+  }
+  .section-label::before {
+    content: '';
+    display: block;
+    width: 20px;
+    height: 2px;
+    background: var(--blue);
+    border-radius: 1px;
+  }
+
+  hr {
+    border: none;
+    border-top: 1px solid var(--separator);
+    margin: 56px 0;
+  }
+
+  /* ─── Cover / Hero ──────────────────────────────────────────────────── */
+  .cover {
+    padding: 96px 0 80px;
+    border-bottom: 1px solid var(--separator);
+    position: relative;
+    overflow: hidden;
+  }
+  .cover::before {
+    content: '';
+    position: absolute;
+    top: -120px; left: -120px;
+    width: 500px; height: 500px;
+    background: radial-gradient(circle, rgba(10,132,255,0.12) 0%, transparent 70%);
+    pointer-events: none;
+  }
+  .cover::after {
+    content: '';
+    position: absolute;
+    bottom: -80px; right: -80px;
+    width: 400px; height: 400px;
+    background: radial-gradient(circle, rgba(48,209,88,0.07) 0%, transparent 70%);
+    pointer-events: none;
+  }
+
+  .cover-eyebrow {
+    font-size: 0.8rem;
+    font-weight: 600;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--blue);
+    margin-bottom: 20px;
+  }
+
+  .cover h1 { margin-bottom: 20px; }
+
+  .cover-sub {
+    font-size: 1.25rem;
+    color: var(--text-sub);
+    max-width: 620px;
+    margin-bottom: 40px;
+    line-height: 1.55;
+  }
+
+  .cover-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 24px;
+  }
+  .cover-meta-item {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+  }
+  .cover-meta-item .label {
+    font-size: 0.72rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--text-dim);
+    font-weight: 600;
+  }
+  .cover-meta-item .value {
+    font-size: 0.9rem;
+    color: var(--text);
+    font-weight: 500;
+  }
+
+  /* ─── Status badge ──────────────────────────────────────────────────── */
+  .badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+  }
+  .badge-dot {
+    width: 7px; height: 7px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+  .badge.green  { background: var(--green-dim);  color: var(--green);  border: 1px solid rgba(48,209,88,0.25); }
+  .badge.blue   { background: var(--blue-dim);   color: var(--blue);   border: 1px solid rgba(10,132,255,0.25); }
+  .badge.orange { background: var(--orange-dim); color: var(--orange); border: 1px solid rgba(255,159,10,0.25); }
+  .badge.red    { background: var(--red-dim);    color: var(--red);    border: 1px solid rgba(255,69,58,0.25); }
+  .badge.purple { background: var(--purple-dim); color: var(--purple); border: 1px solid rgba(191,90,242,0.25); }
+  .badge.green  .badge-dot { background: var(--green); }
+  .badge.blue   .badge-dot { background: var(--blue); }
+  .badge.orange .badge-dot { background: var(--orange); }
+  .badge.red    .badge-dot { background: var(--red); }
+  .badge.purple .badge-dot { background: var(--purple); }
+
+  /* ─── Cards ─────────────────────────────────────────────────────────── */
+  .card {
+    background: var(--bg-elevated);
+    border: 1px solid var(--separator);
+    border-radius: var(--radius);
+    padding: 28px;
+    margin-bottom: 16px;
+  }
+  .card-grid {
+    display: grid;
+    gap: 14px;
+  }
+  .card-grid.cols-2 { grid-template-columns: repeat(2, 1fr); }
+  .card-grid.cols-3 { grid-template-columns: repeat(3, 1fr); }
+
+  .stat-card {
+    background: var(--bg-elevated);
+    border: 1px solid var(--separator);
+    border-radius: var(--radius);
+    padding: 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+  .stat-card .stat-num {
+    font-size: 2.2rem;
+    font-weight: 700;
+    letter-spacing: -0.03em;
+    color: var(--text);
+    line-height: 1;
+  }
+  .stat-card .stat-label {
+    font-size: 0.82rem;
+    color: var(--text-sub);
+    font-weight: 500;
+  }
+  .stat-card .stat-sub {
+    font-size: 0.75rem;
+    color: var(--text-dim);
+    margin-top: 4px;
+  }
+
+  /* ─── Tables ─────────────────────────────────────────────────────────── */
+  .table-wrap { overflow-x: auto; margin: 20px 0; }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.875rem;
+  }
+  th {
+    text-align: left;
+    padding: 10px 16px;
+    border-bottom: 1px solid var(--bg-inset);
+    font-size: 0.72rem;
+    font-weight: 600;
+    letter-spacing: 0.07em;
+    text-transform: uppercase;
+    color: var(--text-dim);
+  }
+  td {
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--separator);
+    color: var(--text-sub);
+    vertical-align: top;
+  }
+  tr:last-child td { border-bottom: none; }
+  td:first-child { color: var(--text); font-weight: 500; }
+  td code { font-size: 0.8em; }
+
+  /* ─── Pipeline flow ─────────────────────────────────────────────────── */
+  .pipeline {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+    margin: 24px 0;
+  }
+  .pipeline-job {
+    display: flex;
+    align-items: flex-start;
+    gap: 16px;
+    position: relative;
+  }
+  .pipeline-job:not(:last-child)::after {
+    content: '';
+    position: absolute;
+    left: 19px;
+    top: 40px;
+    bottom: -2px;
+    width: 2px;
+    background: linear-gradient(to bottom, var(--bg-inset), transparent);
+  }
+  .pipeline-icon {
+    width: 40px; height: 40px;
+    border-radius: 12px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 1.1rem;
+    flex-shrink: 0;
+    border: 1px solid var(--separator);
+    background: var(--bg-elevated);
+    position: relative;
+    z-index: 1;
+  }
+  .pipeline-body {
+    padding: 8px 0 28px;
+    flex: 1;
+  }
+  .pipeline-body h3 {
+    font-size: 1rem;
+    margin-bottom: 4px;
+    color: var(--text);
+  }
+  .pipeline-body p {
+    font-size: 0.85rem;
+    margin-bottom: 0;
+    color: var(--text-sub);
+  }
+  .pipeline-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-top: 8px;
+  }
+  .tag {
+    font-size: 0.72rem;
+    font-weight: 600;
+    padding: 3px 9px;
+    border-radius: 6px;
+    background: var(--bg-card);
+    color: var(--text-dim);
+    border: 1px solid var(--separator);
+    letter-spacing: 0.03em;
+  }
+
+  /* ─── Architecture diagram ──────────────────────────────────────────── */
+  .arch-layer {
+    border: 1px solid var(--separator);
+    border-radius: var(--radius);
+    padding: 20px 24px;
+    margin-bottom: 12px;
+    position: relative;
+  }
+  .arch-layer-label {
+    font-size: 0.7rem;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--text-dim);
+    margin-bottom: 12px;
+  }
+  .arch-nodes {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+  .arch-node {
+    background: var(--bg-card);
+    border: 1px solid var(--separator);
+    border-radius: var(--radius-sm);
+    padding: 10px 14px;
+    font-size: 0.82rem;
+    color: var(--text);
+    font-weight: 500;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .arch-node .dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+  .arch-node.blue .dot  { background: var(--blue); }
+  .arch-node.green .dot { background: var(--green); }
+  .arch-node.orange .dot{ background: var(--orange); }
+  .arch-node.purple .dot{ background: var(--purple); }
+
+  /* ─── Call-out boxes ────────────────────────────────────────────────── */
+  .callout {
+    border-left: 3px solid;
+    border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+    padding: 16px 20px;
+    margin: 20px 0;
+    font-size: 0.88rem;
+    line-height: 1.65;
+  }
+  .callout.blue   { background: var(--blue-dim);   border-color: var(--blue);   color: #a0c4ff; }
+  .callout.green  { background: var(--green-dim);  border-color: var(--green);  color: #90e8a8; }
+  .callout.orange { background: var(--orange-dim); border-color: var(--orange); color: #ffd080; }
+  .callout.red    { background: var(--red-dim);    border-color: var(--red);    color: #ff9994; }
+  .callout strong { color: var(--text); }
+
+  /* ─── Divider with label ────────────────────────────────────────────── */
+  .divider-label {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    margin: 60px 0 48px;
+    color: var(--text-dim);
+    font-size: 0.72rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+  }
+  .divider-label::before, .divider-label::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: var(--separator);
+  }
+
+  /* ─── Two-col layout ────────────────────────────────────────────────── */
+  .two-col {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    margin: 20px 0;
+  }
+
+  /* ─── Incident / timeline ───────────────────────────────────────────── */
+  .incident {
+    border: 1px solid var(--separator);
+    border-radius: var(--radius);
+    overflow: hidden;
+    margin: 20px 0;
+  }
+  .incident-header {
+    background: var(--bg-elevated);
+    padding: 16px 20px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border-bottom: 1px solid var(--separator);
+  }
+  .incident-title {
+    font-weight: 600;
+    font-size: 0.95rem;
+    color: var(--text);
+  }
+  .incident-body {
+    padding: 20px;
+  }
+  .incident-body p { font-size: 0.875rem; }
+
+  .timeline {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+    padding-left: 20px;
+    border-left: 2px solid var(--bg-inset);
+    margin: 16px 0;
+  }
+  .timeline-item {
+    position: relative;
+    padding: 0 0 18px 20px;
+    font-size: 0.85rem;
+    color: var(--text-sub);
+  }
+  .timeline-item::before {
+    content: '';
+    position: absolute;
+    left: -6px;
+    top: 6px;
+    width: 10px; height: 10px;
+    border-radius: 50%;
+    background: var(--bg-inset);
+    border: 2px solid var(--bg-card);
+  }
+  .timeline-item.ok::before   { background: var(--green); }
+  .timeline-item.bad::before  { background: var(--red); }
+  .timeline-item.fix::before  { background: var(--blue); }
+  .timeline-item strong { color: var(--text); }
+
+  /* ─── Feature list ──────────────────────────────────────────────────── */
+  .feature-list {
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin: 16px 0;
+  }
+  .feature-list li {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    font-size: 0.875rem;
+    color: var(--text-sub);
+    line-height: 1.55;
+  }
+  .feature-list li::before {
+    content: '→';
+    color: var(--blue);
+    font-weight: 700;
+    flex-shrink: 0;
+    margin-top: 1px;
+  }
+
+  /* ─── Print ──────────────────────────────────────────────────────────── */
+  @media print {
+    body { max-width: 100%; padding: 0 40px 60px; }
+    .cover { padding: 60px 0 50px; }
+    h1 { font-size: 2.4rem; }
+    .section { margin: 48px 0; }
+    .card-grid.cols-3 { grid-template-columns: repeat(3, 1fr); }
+    * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    .pipeline-job::after { display: none; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ══════════════════════════════════════════════════════════════════════
+     COVER
+════════════════════════════════════════════════════════════════════════ -->
+<div class="cover">
+  <div class="cover-eyebrow">Platform Engineering Report · 2026</div>
+  <h1>Trophic Tech<br>Mission Control</h1>
+  <p class="cover-sub">
+    A production-grade internal DevOps platform — built, containerised, and deployed on
+    Azure Kubernetes Service with a fully automated CI/CD pipeline, infrastructure-as-code,
+    and real-time observability.
+  </p>
+  <div class="cover-meta">
+    <div class="cover-meta-item">
+      <span class="label">Status</span>
+      <span class="value"><span class="badge green"><span class="badge-dot"></span>Live in Production</span></span>
+    </div>
+    <div class="cover-meta-item">
+      <span class="label">Live URL</span>
+      <span class="value">app.68.220.239.81.nip.io</span>
+    </div>
+    <div class="cover-meta-item">
+      <span class="label">Cluster</span>
+      <span class="value">trophic-staging-aks · East US 2</span>
+    </div>
+    <div class="cover-meta-item">
+      <span class="label">Pipeline</span>
+      <span class="value">GitHub Actions → AKS</span>
+    </div>
+    <div class="cover-meta-item">
+      <span class="label">Author</span>
+      <span class="value">Chikwe Azinge</span>
+    </div>
+  </div>
+</div>
+
+
+<!-- ══════════════════════════════════════════════════════════════════════
+     EXECUTIVE SUMMARY
+════════════════════════════════════════════════════════════════════════ -->
+<div class="section">
+  <div class="section-label">Overview</div>
+  <h2>Executive Summary</h2>
+  <p>
+    Mission Control is a full-stack internal dashboard purpose-built for Trophic Tech's engineering teams
+    to manage real-time deployment activity across all active client engagements.
+    It provides animated metrics, a searchable command palette, filterable deployment pipelines,
+    and project tracking — all behind JWT-authenticated sessions with role-based access.
+  </p>
+  <p>
+    The platform is deployed on Azure Kubernetes Service via a six-stage GitHub Actions CI/CD pipeline
+    featuring security scanning, automated testing, Docker image publishing to Azure Container Registry,
+    Helm-based canary + full rollouts, and a manual approval gate guarding every production promotion.
+    The entire cloud infrastructure is defined in Terraform across six reusable modules.
+  </p>
+
+  <div class="card-grid cols-3" style="margin-top:32px;">
+    <div class="stat-card">
+      <span class="stat-num" style="color:var(--blue)">6</span>
+      <span class="stat-label">CI/CD pipeline stages</span>
+      <span class="stat-sub">Security → Test → Build → Staging → Approval → Production</span>
+    </div>
+    <div class="stat-card">
+      <span class="stat-num" style="color:var(--green)">6</span>
+      <span class="stat-label">Terraform modules</span>
+      <span class="stat-sub">Networking, AKS, ACR, Database, Key Vault, Monitoring</span>
+    </div>
+    <div class="stat-card">
+      <span class="stat-num" style="color:var(--orange)">6</span>
+      <span class="stat-label">Client projects tracked</span>
+      <span class="stat-sub">Capital One, Nordstrom, Microsoft, Nike, Salesforce, Wells Fargo</span>
+    </div>
+  </div>
+</div>
+
+<hr />
+
+<!-- ══════════════════════════════════════════════════════════════════════
+     APPLICATION
+════════════════════════════════════════════════════════════════════════ -->
+<div class="section">
+  <div class="section-label">The Application</div>
+  <h2>What Mission Control Does</h2>
+  <p>
+    Mission Control gives Trophic Tech engineers a single pane of glass across all ongoing client work.
+    Every page is a server component fetching live data from PostgreSQL, with client-side interactivity
+    layered on top for search, filtering, and animated visualisations.
+  </p>
+
+  <div class="two-col" style="margin-top:28px;">
+    <div class="card">
+      <h3>Dashboard</h3>
+      <ul class="feature-list">
+        <li>Count-up animated metrics — Total Deployments, Success Rate, Active Projects, Avg Deploy Time via <code>requestAnimationFrame</code></li>
+        <li>7-day SVG activity chart — success (green) vs failed (red) bars with staggered entrance animations</li>
+        <li>Auto-refresh every 30 seconds via <code>router.refresh()</code>; live pulse indicator in the header</li>
+        <li>Row-click detail drawer with full deployment metadata and one-click ID copy</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h3>Pipeline</h3>
+      <ul class="feature-list">
+        <li>Full-text search across project name, client, version, branch, and triggered-by in real time</li>
+        <li>Status tabs — All / Running / Success / Failed / Pending with live per-tab counts</li>
+        <li>Environment toggle — All / Staging / Production</li>
+        <li>Sortable columns; click header to sort, click again to reverse</li>
+        <li>Trigger Run modal — queue a new deployment from the UI</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h3>Projects</h3>
+      <ul class="feature-list">
+        <li>Filter tabs — All / Active / Maintenance / Archived with staggered card entrance (55 ms offset)</li>
+        <li>Hover-reveal "Deployments" button navigates directly to filtered Pipeline view</li>
+        <li>Tech stack chips, status badges, and client attribution on each card</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h3>Global UX</h3>
+      <ul class="feature-list">
+        <li><code>⌘K</code> Command Palette — debounced search across projects and deployments via <code>/api/search</code></li>
+        <li>Notification Bell — last 8 deployments with unread badge on running/failed events</li>
+        <li>Toast notifications — auto-dismiss at 4.5 s, stacking up to 5</li>
+        <li>Keyboard shortcuts — Escape closes all overlays from anywhere in the app</li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+<hr />
+
+<!-- ══════════════════════════════════════════════════════════════════════
+     TECH STACK
+════════════════════════════════════════════════════════════════════════ -->
+<div class="section">
+  <div class="section-label">Technology</div>
+  <h2>Tech Stack</h2>
+
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>Layer</th>
+          <th>Technology</th>
+          <th>Version</th>
+          <th>Notes</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr><td>Framework</td><td>Next.js App Router</td><td>^15.3.0</td><td>Server components, standalone output</td></tr>
+        <tr><td>UI</td><td>React</td><td>^19.0.0</td><td>Concurrent features, <code>use()</code> hook</td></tr>
+        <tr><td>Language</td><td>TypeScript</td><td>^5.6.0</td><td>Strict mode throughout</td></tr>
+        <tr><td>Styling</td><td>Tailwind CSS</td><td>^3.4.15</td><td>Dark mode Apple design system</td></tr>
+        <tr><td>Auth</td><td>Auth.js v5 (next-auth)</td><td>^5.0.0</td><td>Credentials + JWT, <code>AUTH_TRUST_HOST=true</code> behind proxy</td></tr>
+        <tr><td>ORM</td><td>Prisma</td><td>^5.22.0</td><td>PostgreSQL adapter, typed client</td></tr>
+        <tr><td>Database</td><td>PostgreSQL Flexible Server</td><td>16</td><td>Azure-managed, private VNet access</td></tr>
+        <tr><td>Validation</td><td>Zod</td><td>^3.23.8</td><td>API boundary validation</td></tr>
+        <tr><td>Containerisation</td><td>Docker — multi-stage BuildKit</td><td>—</td><td>3-stage: deps → builder → runner</td></tr>
+        <tr><td>Orchestration</td><td>Kubernetes / Helm on AKS</td><td>—</td><td>Azure CNI, two node pools</td></tr>
+        <tr><td>IaC</td><td>Terraform (azurerm ~> 4.0)</td><td>≥ 1.9.0</td><td>Remote state in Azure Storage</td></tr>
+        <tr><td>CI/CD</td><td>GitHub Actions</td><td>—</td><td>OIDC auth — no credential blobs</td></tr>
+        <tr><td>Registry</td><td>Azure Container Registry</td><td>—</td><td>Private endpoint, AcrPull role</td></tr>
+        <tr><td>Testing</td><td>Jest + Testing Library</td><td>^29.7.0</td><td>60% coverage threshold</td></tr>
+        <tr><td>Monitoring</td><td>Grafana + Azure Monitor</td><td>—</td><td>Helm-deployed, two data sources</td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<hr />
+
+<!-- ══════════════════════════════════════════════════════════════════════
+     ARCHITECTURE
+════════════════════════════════════════════════════════════════════════ -->
+<div class="section">
+  <div class="section-label">Architecture</div>
+  <h2>System Architecture</h2>
+  <p>
+    The entire stack lives in Azure East US 2. A single AKS cluster hosts three namespaces:
+    <code>staging</code>, <code>production</code>, and <code>monitoring</code>.
+    All inbound HTTP traffic routes through a shared nginx-ingress controller backed by an Azure Standard Load Balancer.
+    PostgreSQL is accessed via private VNet injection — no public endpoint is ever exposed.
+  </p>
+
+  <div style="margin-top:28px;">
+    <div class="arch-layer" style="border-color:rgba(10,132,255,0.3); background: rgba(10,132,255,0.04);">
+      <div class="arch-layer-label" style="color:var(--blue)">☁️ Internet / Edge</div>
+      <div class="arch-nodes">
+        <div class="arch-node blue"><span class="dot"></span>Browser / API client</div>
+        <div class="arch-node blue"><span class="dot"></span>nip.io DNS (IP-encoded hostname)</div>
+        <div class="arch-node blue"><span class="dot"></span>GitHub Actions runner (external CI)</div>
+      </div>
+    </div>
+
+    <div class="arch-layer" style="border-color:rgba(255,159,10,0.3); background: rgba(255,159,10,0.04);">
+      <div class="arch-layer-label" style="color:var(--orange)">🔒 Azure Network Boundary</div>
+      <div class="arch-nodes">
+        <div class="arch-node orange"><span class="dot"></span>Azure Standard Load Balancer · 68.220.239.81</div>
+        <div class="arch-node orange"><span class="dot"></span>NSG · trophic-staging-nsg-aks-app</div>
+        <div class="arch-node orange"><span class="dot"></span>NSG · trophic-staging-nsg-aks-system</div>
+        <div class="arch-node orange"><span class="dot"></span>VNet · trophic-staging-vnet</div>
+      </div>
+    </div>
+
+    <div class="arch-layer" style="border-color:rgba(48,209,88,0.3); background: rgba(48,209,88,0.04);">
+      <div class="arch-layer-label" style="color:var(--green)">☸️ AKS Cluster · trophic-staging-aks</div>
+      <div class="arch-nodes">
+        <div class="arch-node green"><span class="dot"></span>nginx-ingress · ingress-nginx ns</div>
+        <div class="arch-node green"><span class="dot"></span>Mission Control · staging ns</div>
+        <div class="arch-node green"><span class="dot"></span>Mission Control · production ns</div>
+        <div class="arch-node green"><span class="dot"></span>Grafana · monitoring ns</div>
+        <div class="arch-node green"><span class="dot"></span>Prisma migrate Job · both ns</div>
+      </div>
+    </div>
+
+    <div class="arch-layer" style="border-color:rgba(191,90,242,0.3); background: rgba(191,90,242,0.04);">
+      <div class="arch-layer-label" style="color:var(--purple)">🗄️ Data &amp; Secrets</div>
+      <div class="arch-nodes">
+        <div class="arch-node purple"><span class="dot"></span>PostgreSQL Flexible Server v16 · private VNet</div>
+        <div class="arch-node purple"><span class="dot"></span>Azure Key Vault · trophic-staging-kv</div>
+        <div class="arch-node purple"><span class="dot"></span>Azure Container Registry · private endpoint</div>
+        <div class="arch-node purple"><span class="dot"></span>Log Analytics Workspace</div>
+      </div>
+    </div>
+  </div>
+
+  <div style="margin-top:32px;">
+    <h3>AKS Node Pool Design</h3>
+    <p>
+      The cluster runs two dedicated node pools on separate subnets, each with its own NSG.
+      This separation is deliberate — Kubernetes taints the system pool with
+      <code>CriticalAddonsOnly=true</code>, ensuring application workloads never land on control-plane nodes.
+    </p>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Pool</th><th>Subnet</th><th>Purpose</th><th>Taint</th><th>VM Size</th></tr></thead>
+        <tbody>
+          <tr>
+            <td>System (<code>systempool</code>)</td>
+            <td><code>10.0.0.0/22</code></td>
+            <td>CoreDNS, kube-proxy, CSI drivers</td>
+            <td><code>CriticalAddonsOnly=true</code></td>
+            <td>Standard_D2s_v3</td>
+          </tr>
+          <tr>
+            <td>App (<code>apppool</code>)</td>
+            <td><code>10.0.4.0/22</code></td>
+            <td>Mission Control, Grafana, nginx-ingress</td>
+            <td>None</td>
+            <td>Standard_D2s_v3 (autoscale 2→10)</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div style="margin-top:32px;">
+    <h3>VNet Subnet Layout</h3>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Subnet</th><th>CIDR</th><th>Delegation</th><th>NSG</th></tr></thead>
+        <tbody>
+          <tr><td><code>snet-aks-system</code></td><td><code>10.0.0.0/22</code></td><td>—</td><td><code>trophic-staging-nsg-aks-system</code></td></tr>
+          <tr><td><code>snet-aks-app</code></td><td><code>10.0.4.0/22</code></td><td>—</td><td><code>trophic-staging-nsg-aks-app</code></td></tr>
+          <tr><td><code>snet-database</code></td><td><code>10.0.8.0/24</code></td><td><code>Microsoft.DBforPostgreSQL/flexibleServers</code></td><td><code>trophic-staging-nsg-database</code></td></tr>
+          <tr><td><code>snet-pe</code></td><td><code>10.0.9.0/24</code></td><td>—</td><td>None</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p style="margin-top:10px; font-size:0.82rem;">
+      Azure CNI assigns real VNet IPs to pods — every pod has a routable IP visible inside the VNet, with no NAT overlay.
+      Azure Network Policy enforces <code>NetworkPolicy</code> objects at the kernel level.
+    </p>
+  </div>
+</div>
+
+<hr />
+
+<!-- ══════════════════════════════════════════════════════════════════════
+     CI/CD PIPELINE
+════════════════════════════════════════════════════════════════════════ -->
+<div class="section">
+  <div class="section-label">Continuous Integration &amp; Delivery</div>
+  <h2>CI/CD Pipeline</h2>
+  <p>
+    The pipeline is defined in <code>.github/workflows/main.yml</code> and follows a two-branch promotion model.
+    Pushing to <code>dev</code> runs Jobs 1–4 and deploys to the staging namespace for continuous validation.
+    Merging a PR to <code>main</code> triggers the full six-stage pipeline through to production.
+  </p>
+
+  <pre style="margin:24px 0;">dev / feature/*  ──►  push to dev  ──►  Jobs 1–4  (CI + Staging deploy)
+                                               │
+                                       PR merge to main
+                                               │
+                                               ▼
+                            main push  ──►  Jobs 1–6  (CI + Approval Gate + Production)</pre>
+
+  <div class="pipeline" style="margin-top:36px;">
+
+    <div class="pipeline-job">
+      <div class="pipeline-icon">🔍</div>
+      <div class="pipeline-body">
+        <h3>Job 1 — Security &amp; Lint</h3>
+        <p>ESLint SARIF output uploaded to the GitHub Security tab. Trivy filesystem scan for secrets and CVEs. Both checks are non-blocking — findings are surfaced without halting the pipeline.</p>
+        <div class="pipeline-tags">
+          <span class="tag">Trivy fs</span>
+          <span class="tag">ESLint SARIF</span>
+          <span class="tag">GitHub Security tab</span>
+          <span class="tag">Non-blocking</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="pipeline-job">
+      <div class="pipeline-icon">🧪</div>
+      <div class="pipeline-body">
+        <h3>Job 2 — Unit &amp; Integration Tests</h3>
+        <p>Jest test suite runs against a real Postgres 16 service container (not mocked). Coverage report is uploaded to Codecov. Failures here block the build — the pipeline does not proceed without green tests.</p>
+        <div class="pipeline-tags">
+          <span class="tag">Jest</span>
+          <span class="tag">Postgres 16 service</span>
+          <span class="tag">Codecov</span>
+          <span class="tag">60% coverage threshold</span>
+          <span class="tag">Blocking</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="pipeline-job">
+      <div class="pipeline-icon">🐳</div>
+      <div class="pipeline-body">
+        <h3>Job 3 — Build &amp; Push to ACR</h3>
+        <p>Three-stage Dockerfile built with BuildKit layer caching (deps → builder → runner). Image is tagged with the commit SHA and also tagged <code>latest</code> on <code>main</code>. Trivy image scan + SBOM generated and uploaded as SARIF. Authentication uses OIDC — no credential blobs stored as GitHub secrets.</p>
+        <div class="pipeline-tags">
+          <span class="tag">BuildKit</span>
+          <span class="tag">Multi-stage Dockerfile</span>
+          <span class="tag">Trivy image scan</span>
+          <span class="tag">SBOM</span>
+          <span class="tag">OIDC</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="pipeline-job">
+      <div class="pipeline-icon">🟡</div>
+      <div class="pipeline-body">
+        <h3>Job 4 — Deploy → Staging</h3>
+        <p>nginx-ingress is installed (or upgraded) idempotently with <code>externalTrafficPolicy=Local</code>. Key Vault secrets are pulled and materialised as a Kubernetes <code>Secret</code>. A Kubernetes <code>batch/v1</code> Job runs <code>prisma migrate deploy &amp;&amp; node prisma/seed.mjs</code> — migrations are applied and demo data seeded on first run. Helm deploys atomically with a 10-minute timeout. Smoke test runs <code>kubectl exec</code> into the pod and checks <code>/api/health</code> returns <code>"status":"ok"</code> — bypassing LoadBalancer, ingress, and DNS entirely.</p>
+        <div class="pipeline-tags">
+          <span class="tag">nginx-ingress (externalTrafficPolicy=Local)</span>
+          <span class="tag">Key Vault CSI</span>
+          <span class="tag">Prisma migrate</span>
+          <span class="tag">seed.mjs</span>
+          <span class="tag">Helm --atomic</span>
+          <span class="tag">kubectl exec smoke test</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="pipeline-job">
+      <div class="pipeline-icon">🔐</div>
+      <div class="pipeline-body">
+        <h3>Job 5 — Manual Approval Gate</h3>
+        <p>Pipeline pauses at the <code>production-approval</code> GitHub Environment. A required reviewer must approve before any production traffic is touched. This is a hard gate — no bypass, no timeout auto-approve.</p>
+        <div class="pipeline-tags">
+          <span class="tag">GitHub Environment Review</span>
+          <span class="tag">Required reviewer</span>
+          <span class="tag">Manual</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="pipeline-job">
+      <div class="pipeline-icon">🟢</div>
+      <div class="pipeline-body">
+        <h3>Job 6 — Deploy → Production</h3>
+        <p>Checks that the PostgreSQL Flexible Server is in <code>Ready</code> state — auto-starts if <code>Stopped</code> (common after Azure auto-pause on the staging-tier DB). nginx-ingress installed with same settings. Migrations + seed run. Canary deployment at 20% traffic (1 replica, 30 s soak) precedes the full rollout to 3 replicas. Canary is then cleaned up. Health check runs <code>kubectl exec</code> into the production pod — same in-cluster approach as the staging smoke test. Slack notification sent on success or failure.</p>
+        <div class="pipeline-tags">
+          <span class="tag">PostgreSQL readiness check</span>
+          <span class="tag">Canary 20% · 30 s soak</span>
+          <span class="tag">3 replicas full rollout</span>
+          <span class="tag">kubectl exec health check</span>
+          <span class="tag">Slack notify</span>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <div style="margin-top:32px;">
+    <h3>Pipeline Stage SLA</h3>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Stage</th><th>Tool</th><th>Target</th><th>On Failure</th></tr></thead>
+        <tbody>
+          <tr><td>Security Scan</td><td>Trivy (fs) + ESLint</td><td>&lt; 2 min</td><td>SARIF — non-blocking</td></tr>
+          <tr><td>Unit Tests</td><td>Jest + Postgres 16</td><td>&lt; 5 min</td><td>Block build</td></tr>
+          <tr><td>Docker Build</td><td>BuildKit (cached)</td><td>&lt; 3 min</td><td>Block build</td></tr>
+          <tr><td>Image Scan</td><td>Trivy (image)</td><td>&lt; 2 min</td><td>SARIF — non-blocking</td></tr>
+          <tr><td>Push to ACR</td><td>Docker push</td><td>&lt; 2 min</td><td>Block pipeline</td></tr>
+          <tr><td>nginx-ingress install</td><td>Helm</td><td>&lt; 5 min</td><td>Block deploy</td></tr>
+          <tr><td>DB Migration + Seed</td><td>Prisma K8s Job + seed.mjs</td><td>&lt; 4 min</td><td>Fail with pod logs</td></tr>
+          <tr><td>Staging Deploy</td><td>Helm atomic</td><td>&lt; 10 min</td><td>Auto-rollback</td></tr>
+          <tr><td>Smoke Test</td><td>kubectl exec → /api/health</td><td>&lt; 3 min</td><td>Block pipeline</td></tr>
+          <tr><td>Approval Gate</td><td>GitHub Env Review</td><td>Manual</td><td>Halt pipeline</td></tr>
+          <tr><td>PostgreSQL check</td><td>az postgres show</td><td>&lt; 5 min</td><td>Fail if not Ready</td></tr>
+          <tr><td>Canary (20%)</td><td>Helm + NGINX</td><td>30 s soak</td><td>Auto-rollback</td></tr>
+          <tr><td>Prod Deploy</td><td>Helm atomic</td><td>&lt; 10 min</td><td>Auto-rollback</td></tr>
+          <tr><td>Health Check</td><td>kubectl exec → /api/health</td><td>&lt; 3 min</td><td>Block pipeline</td></tr>
+          <tr><td>Slack Notify</td><td>Slack webhook</td><td>&lt; 10 s</td><td>Non-blocking</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<hr />
+
+<!-- ══════════════════════════════════════════════════════════════════════
+     INFRASTRUCTURE
+════════════════════════════════════════════════════════════════════════ -->
+<div class="section">
+  <div class="section-label">Infrastructure as Code</div>
+  <h2>Terraform Infrastructure</h2>
+  <p>
+    All cloud resources are provisioned by Terraform using six composable modules under
+    <code>infrastructure/terraform/modules/</code>.
+    Two environments — staging and production — share the same module set with different variable files.
+    Remote state is stored in Azure Blob Storage with environment-scoped keys.
+  </p>
+
+  <div class="card-grid cols-2" style="margin-top:24px;">
+    <div class="card">
+      <h4>Networking</h4>
+      <h3>VNet &amp; Subnets</h3>
+      <ul class="feature-list">
+        <li>Virtual Network with four purpose-segregated subnets</li>
+        <li>AKS system subnet (10.x.0.0/22) and app subnet (10.x.4.0/22)</li>
+        <li>Database subnet delegated to PostgreSQL Flexible Server — no public endpoint</li>
+        <li>Private endpoint subnet for ACR and Key Vault private links</li>
+        <li>Least-privilege NSGs on every subnet</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h4>AKS</h4>
+      <h3>Cluster</h3>
+      <ul class="feature-list">
+        <li>Azure CNI networking — real pod IPs, no NAT</li>
+        <li>Azure Network Policy enforced at kernel</li>
+        <li>OIDC issuer + Workload Identity — no long-lived credential files</li>
+        <li>Key Vault CSI driver with 2-minute secret auto-rotation</li>
+        <li>OMS agent → Log Analytics (Container Insights)</li>
+        <li>API server, audit, controller manager, scheduler diagnostic logs</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h4>Database</h4>
+      <h3>PostgreSQL</h3>
+      <ul class="feature-list">
+        <li>Azure PostgreSQL Flexible Server v16</li>
+        <li>Private VNet injection — zero public exposure</li>
+        <li>TLS 1.2 minimum enforced</li>
+        <li><code>prevent_destroy</code> lifecycle guard against accidental deletion</li>
+        <li>Production: zone-redundant HA, geo-redundant backup</li>
+        <li>Staging: single node, cost-optimised B-series</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h4>Security</h4>
+      <h3>Key Vault &amp; ACR</h3>
+      <ul class="feature-list">
+        <li>Key Vault with RBAC auth (not legacy access policies)</li>
+        <li>Secrets: DATABASE-URL, AUTH-SECRET, NEXTAUTH-URL</li>
+        <li>Role assignments for deployer SP + AKS Workload Identity</li>
+        <li>ACR with private endpoint and private DNS zone</li>
+        <li>AcrPull role assigned to AKS kubelet managed identity</li>
+        <li>Admin access disabled on ACR</li>
+      </ul>
+    </div>
+  </div>
+
+  <div style="margin-top:28px;">
+    <h3>Staging vs Production</h3>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Setting</th><th>Staging</th><th>Production</th></tr></thead>
+        <tbody>
+          <tr><td>DB SKU</td><td>B_Standard_B1ms</td><td>GP_Standard_D2s_v3</td></tr>
+          <tr><td>DB High Availability</td><td>Disabled</td><td>Zone-redundant</td></tr>
+          <tr><td>DB Backup</td><td>7-day local</td><td>35-day geo-redundant</td></tr>
+          <tr><td>AKS visibility</td><td>Public cluster</td><td>Private cluster</td></tr>
+          <tr><td>ACR SKU</td><td>Basic</td><td>Premium (geo-replication)</td></tr>
+          <tr><td>Log retention</td><td>30 days</td><td>90 days</td></tr>
+          <tr><td>App node autoscale</td><td>1 → 3</td><td>2 → 10</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<hr />
+
+<!-- ══════════════════════════════════════════════════════════════════════
+     MONITORING
+════════════════════════════════════════════════════════════════════════ -->
+<div class="section">
+  <div class="section-label">Observability</div>
+  <h2>Monitoring &amp; Observability</h2>
+
+  <div class="two-col" style="margin-top:24px;">
+    <div class="card">
+      <h3>Grafana</h3>
+      <p>Deployed via Helm to the <code>monitoring</code> namespace on the same AKS cluster.
+         Exposed at <code>grafana.app.68.220.239.81.nip.io</code> via the shared nginx-ingress controller.</p>
+      <ul class="feature-list" style="margin-top:12px;">
+        <li><strong>Azure Monitor datasource</strong> — AKS CPU/memory/pod-ready, PostgreSQL CPU, Log Analytics KQL</li>
+        <li><strong>TestData datasource</strong> — synthetic data for panel prototyping</li>
+        <li><code>grafana-reader</code> service principal: Monitoring Reader (subscription) + Log Analytics Reader (workspace)</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h3>Azure Monitor Alerts</h3>
+      <p>Four metric alerts provisioned by the Terraform <code>monitoring</code> module, routed to an action group for email notification.</p>
+      <div class="table-wrap" style="margin-top:12px;">
+        <table>
+          <thead><tr><th>Alert</th><th>Threshold</th><th>Severity</th></tr></thead>
+          <tbody>
+            <tr><td>AKS node CPU</td><td>&gt; 80% / 15 min</td><td>P2</td></tr>
+            <tr><td>AKS node memory</td><td>&gt; 85% / 15 min</td><td>P2</td></tr>
+            <tr><td>Pods not ready</td><td>&gt; 0 / 5 min</td><td>P1</td></tr>
+            <tr><td>PostgreSQL CPU</td><td>&gt; 80% / 10 min</td><td>P2</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<hr />
+
+<!-- ══════════════════════════════════════════════════════════════════════
+     ENGINEERING DECISIONS
+════════════════════════════════════════════════════════════════════════ -->
+<div class="section">
+  <div class="section-label">Engineering Decisions</div>
+  <h2>Key Decisions &amp; Post-Mortems</h2>
+  <p>
+    Several non-obvious problems were diagnosed and solved during the build and deployment of this platform.
+    Each decision below reflects a real production incident, its root cause, and the fix applied.
+  </p>
+
+  <!-- INCIDENT 1 -->
+  <div class="incident" style="margin-top:32px;">
+    <div class="incident-header">
+      <span class="incident-title">Incident 1 — ERR_CONNECTION_TIMED_OUT on every browser request</span>
+      <span class="badge orange"><span class="badge-dot"></span>Resolved</span>
+    </div>
+    <div class="incident-body">
+      <p><strong>Symptom:</strong> Chrome showed <code>ERR_CONNECTION_TIMED_OUT</code>. The app was reachable from inside the AKS cluster (HTTP 200 from <code>kubectl exec</code>) but not from the public internet.</p>
+
+      <div class="callout red" style="margin:16px 0;">
+        <strong>Root cause:</strong> Azure Standard Load Balancer distributes inbound traffic across ALL nodepools in the backend pool — both the <code>system</code> pool and the <code>app</code> pool. The AKS health probe checks the NodePort (31151) on both nodes and passes (kube-proxy forwards via iptables on all nodes). The LB therefore considers both nodes healthy and round-robins ~50% of traffic to each. The system nodepool subnet NSG (<code>trophic-staging-nsg-aks-system</code>) had only a <code>DenyInternetInbound</code> rule and no allow rule for HTTP traffic. Azure Standard LB evaluates NSG rules <em>after</em> DNAT — the destination IP at NSG evaluation time is the node's private IP, so the LB's own public IP (68.220.239.81) in the existing NSG allow rule never matched. Half of all requests were silently dropped.
+      </div>
+
+      <div class="timeline">
+        <div class="timeline-item bad"><strong>Problem identified:</strong> Internal curl works, external browser times out → NSG issue, not application.</div>
+        <div class="timeline-item bad"><strong>First check:</strong> Single NSG on app nodepool had correct allow rule (port 80/443, Internet → *). System nodepool NSG not examined.</div>
+        <div class="timeline-item fix"><strong>Fix 1 (immediate):</strong> Added <code>AllowHTTPFromInternet</code> (port 80/443, priority 200) and <code>AllowNodePortsFromInternet</code> (30000–32767, priority 150) to <code>trophic-staging-nsg-aks-system</code>.</div>
+        <div class="timeline-item fix"><strong>Fix 2 (permanent):</strong> Patched the live ingress-nginx service with <code>externalTrafficPolicy=Local</code>. This signals to the Azure Cloud Controller that only nodes running the ingress-nginx pod should be included in the LB backend — app nodepool only. The system nodepool is excluded, making its NSG irrelevant to the traffic path.</div>
+        <div class="timeline-item fix"><strong>Fix 3 (CI-persistent):</strong> Added <code>--set controller.service.externalTrafficPolicy=Local</code> to both nginx-ingress Helm install steps in the workflow, so the setting survives every future deploy.</div>
+        <div class="timeline-item ok"><strong>Verified:</strong> HTTP 200 from local machine: <code>{"status":"ok","db":"connected"}</code></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- INCIDENT 2 -->
+  <div class="incident">
+    <div class="incident-header">
+      <span class="incident-title">Incident 2 — Smoke test failing with HTTP 000 / exit code 28</span>
+      <span class="badge orange"><span class="badge-dot"></span>Resolved</span>
+    </div>
+    <div class="incident-body">
+      <p><strong>Symptom:</strong> Staging smoke test and production health check both failed with <code>HTTP 000</code> (curl: TCP connection never established) or <code>exit code 28</code> (curl timeout) when hitting the nip.io hostname.</p>
+
+      <div class="callout red" style="margin:16px 0;">
+        <strong>Root cause:</strong> The original smoke test and health check used <code>curl http://staging.68.220.239.81.nip.io/api/health</code>. The Azure Load Balancer IP can change when nginx-ingress is reinstalled (the CI workflow reinstalls it on every deploy). If the new IP differs from the hardcoded nip.io hostname, all external URL checks produce <code>HTTP 000</code> (connection refused) or time out entirely. Even with a retry loop (12 × 15 s), the checks failed because the root cause was connectivity, not transience.
+      </div>
+
+      <div class="timeline">
+        <div class="timeline-item bad"><strong>Retry loop added:</strong> 12 attempts × 15 s = 3 minutes. Still failed — external IP mismatch is not a transient error.</div>
+        <div class="timeline-item fix"><strong>Fix:</strong> Replaced all external URL checks with in-cluster <code>kubectl exec</code>. The pod is identified by label selector <code>app.kubernetes.io/name=trophic-mission-control</code>; <code>kubectl wait --for=condition=Ready</code> confirms pod health before the exec; then <code>curl -sf http://localhost:3000/api/health | grep -q '"status":"ok"'</code> runs inside the container.</div>
+        <div class="timeline-item ok"><strong>Result:</strong> Smoke test and health check are now completely independent of LoadBalancer IP, ingress, DNS, and external network routing — they test the application layer only.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- DECISION 3 -->
+  <div class="incident">
+    <div class="incident-header">
+      <span class="incident-title">Decision — Standalone seed script with pre-computed bcrypt hash</span>
+      <span class="badge blue"><span class="badge-dot"></span>Design choice</span>
+    </div>
+    <div class="incident-body">
+      <p>
+        The original <code>seed.ts</code> required <code>bcryptjs</code> and <code>tsx</code> at runtime to hash passwords.
+        The Next.js standalone build only copies <code>@prisma/client</code>, <code>prisma</code>, and <code>.prisma</code>
+        into the runner image — not <code>bcryptjs</code> or <code>tsx</code>. Running the TypeScript seed inside the
+        Kubernetes migration Job would fail with <code>MODULE_NOT_FOUND</code>.
+      </p>
+      <div class="callout blue" style="margin:16px 0;">
+        <strong>Solution:</strong> Created <code>prisma/seed.mjs</code> — a plain ES module using only <code>@prisma/client</code>.
+        The bcrypt hash for <code>demo1234</code> was pre-computed (<code>$2b$10$XUf8Qv…</code>) and hardcoded as a constant.
+        Users and projects are upserted (idempotent on re-run). Deployments are only seeded when the table is empty.
+        The file ships automatically in the Docker image because the Dockerfile already copies the entire <code>prisma/</code>
+        directory into the runner stage.
+      </div>
+    </div>
+  </div>
+
+  <!-- DECISION 4 -->
+  <div class="incident">
+    <div class="incident-header">
+      <span class="incident-title">Decision — AUTH_TRUST_HOST and NEXTAUTH_URL hardcoded in CI</span>
+      <span class="badge blue"><span class="badge-dot"></span>Design choice</span>
+    </div>
+    <div class="incident-body">
+      <p>
+        Auth.js v5 rejects requests when the <code>Host</code> header doesn't match the trusted origin.
+        Behind nginx-ingress the pod sees a nip.io <code>Host</code> header, which Auth.js treats as untrusted by default.
+        Additionally, the Key Vault values for <code>NEXTAUTH-URL</code> contained stale <code>trophictech.io</code> hostnames
+        with no update mechanism (no Key Vault write permissions from the pipeline).
+      </p>
+      <div class="callout blue" style="margin:16px 0;">
+        <strong>Solution:</strong> <code>AUTH_TRUST_HOST=true</code> injected into the Kubernetes Secret in both environments.
+        <code>NEXTAUTH_URL</code> hardcoded to the nip.io hostname directly in the workflow rather than reading from Key Vault —
+        eliminating the stale-value problem at the source. Both values are explicit, reviewable, and version-controlled
+        in the workflow file.
+      </div>
+    </div>
+  </div>
+
+  <!-- DECISION 5 -->
+  <div class="incident">
+    <div class="incident-header">
+      <span class="incident-title">Decision — nginx-ingress installed idempotently by CI, not by Terraform</span>
+      <span class="badge blue"><span class="badge-dot"></span>Design choice</span>
+    </div>
+    <div class="incident-body">
+      <p>
+        A <code>terraform destroy</code> removes the AKS cluster, destroying all Helm releases including nginx-ingress.
+        Placing the nginx-ingress install in Terraform would require a separate Helm provider and tightly couples
+        infrastructure and application deployment. The pipeline needs nginx-ingress to exist before every Helm deploy anyway.
+      </p>
+      <div class="callout blue" style="margin:16px 0;">
+        <strong>Solution:</strong> Both the staging and production deploy jobs run
+        <code>helm upgrade --install ingress-nginx ingress-nginx/ingress-nginx --set controller.service.externalTrafficPolicy=Local --wait --timeout 5m</code>
+        as the first step before any application Helm commands. <code>helm upgrade --install</code> is idempotent —
+        it creates the release if absent or upgrades if present. After any infrastructure rebuild, the next CI run
+        fully restores the ingress layer automatically with no manual intervention.
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<hr />
+
+<!-- ══════════════════════════════════════════════════════════════════════
+     DOCKER IMAGE
+════════════════════════════════════════════════════════════════════════ -->
+<div class="section">
+  <div class="section-label">Containerisation</div>
+  <h2>Docker Image Design</h2>
+  <p>
+    The production image is built with a three-stage Dockerfile. Each stage has a single responsibility,
+    keeping the final runner image lean and the attack surface minimal.
+  </p>
+
+  <div class="card-grid cols-3" style="margin-top:24px;">
+    <div class="card">
+      <h4>Stage 1</h4>
+      <h3>deps</h3>
+      <p>Installs all npm dependencies (including devDependencies). This layer is cached by the package-lock hash and rarely rebuilds.</p>
+    </div>
+    <div class="card">
+      <h4>Stage 2</h4>
+      <h3>builder</h3>
+      <p>Copies source and runs <code>next build</code> with <code>output: "standalone"</code>. Produces the minimal server bundle in <code>.next/standalone</code>.</p>
+    </div>
+    <div class="card">
+      <h4>Stage 3</h4>
+      <h3>runner</h3>
+      <p>Non-root user (UID 1001). Copies only: standalone server, static assets, <code>@prisma/client</code>, <code>prisma/</code> directory, and the migration binary. Healthcheck on <code>/api/health</code>. No devDependencies, no source code.</p>
+    </div>
+  </div>
+
+  <div class="callout blue" style="margin-top:24px;">
+    <strong>Why standalone output matters:</strong> <code>output: "standalone"</code> traces all server-side imports and
+    bundles only the modules actually used — typically reducing the Node.js module tree by 80–90% compared to shipping
+    the full <code>node_modules</code>. The runner image contains only what the production server needs to start.
+  </div>
+</div>
+
+<hr />
+
+<!-- ══════════════════════════════════════════════════════════════════════
+     SECURITY
+════════════════════════════════════════════════════════════════════════ -->
+<div class="section">
+  <div class="section-label">Security</div>
+  <h2>Security Posture</h2>
+
+  <div class="two-col" style="margin-top:24px;">
+    <div class="card">
+      <h3>Authentication &amp; Secrets</h3>
+      <ul class="feature-list">
+        <li>Auth.js v5 with Credentials provider and JWT sessions — no OAuth, no external IdP dependency</li>
+        <li>bcrypt password hashing at cost factor 10</li>
+        <li>Role-based access: <code>admin</code> / <code>engineer</code> / <code>viewer</code> enforced in middleware</li>
+        <li>All secrets stored in Azure Key Vault; injected into pods via CSI driver (never stored in container image)</li>
+        <li>GitHub Actions uses OIDC — no long-lived service principal credentials as GitHub secrets</li>
+        <li>ACR admin access disabled; pull access via <code>AcrPull</code> role on kubelet managed identity</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h3>Network Security</h3>
+      <ul class="feature-list">
+        <li>PostgreSQL: private VNet injection only — no public endpoint</li>
+        <li>ACR: private endpoint + private DNS zone</li>
+        <li>Key Vault: private endpoint</li>
+        <li>NSGs on every subnet with explicit allow-lists and <code>DenyAllInBound</code> at priority 65500</li>
+        <li>Azure CNI + Azure Network Policy: pod-to-pod traffic restricted at kernel level</li>
+        <li>TLS 1.2 minimum enforced on PostgreSQL</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="table-wrap" style="margin-top:20px;">
+    <table>
+      <thead><tr><th>Required GitHub Secret</th><th>Description</th></tr></thead>
+      <tbody>
+        <tr><td><code>AZURE_CLIENT_ID</code></td><td>OIDC federated identity client ID</td></tr>
+        <tr><td><code>AZURE_TENANT_ID</code></td><td>Azure tenant ID</td></tr>
+        <tr><td><code>AZURE_SUBSCRIPTION_ID</code></td><td>Azure subscription ID</td></tr>
+        <tr><td><code>ACR_REGISTRY</code></td><td>ACR login server (e.g. <code>trophictech.azurecr.io</code>)</td></tr>
+        <tr><td><code>ACR_REPOSITORY</code></td><td>Image name (e.g. <code>mission-control</code>)</td></tr>
+        <tr><td><code>AKS_CLUSTER</code></td><td>AKS cluster name</td></tr>
+        <tr><td><code>AKS_RESOURCE_GROUP</code></td><td>Resource group of the AKS cluster</td></tr>
+        <tr><td><code>HELM_RELEASE</code></td><td>Helm release base name</td></tr>
+        <tr><td><code>SLACK_WEBHOOK_URL</code></td><td>Slack incoming webhook</td></tr>
+        <tr><td><code>CODECOV_TOKEN</code></td><td>Codecov upload token</td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<hr />
+
+<!-- ══════════════════════════════════════════════════════════════════════
+     LIVE STATUS
+════════════════════════════════════════════════════════════════════════ -->
+<div class="section">
+  <div class="section-label">Live Deployment</div>
+  <h2>Current Deployment Status</h2>
+
+  <div class="card-grid cols-2" style="margin-top:24px;">
+    <div class="stat-card">
+      <div style="display:flex;align-items:center;justify-content:space-between;">
+        <span class="stat-label">Mission Control App</span>
+        <span class="badge green"><span class="badge-dot"></span>HTTP 200</span>
+      </div>
+      <code style="font-size:0.82rem;margin-top:8px;display:block;">http://app.68.220.239.81.nip.io</code>
+      <p style="font-size:0.78rem;margin-top:8px;color:var(--text-dim);">Login: <code>chikwex@trophictech.io</code> / <code>demo1234</code></p>
+    </div>
+    <div class="stat-card">
+      <div style="display:flex;align-items:center;justify-content:space-between;">
+        <span class="stat-label">Grafana Monitoring</span>
+        <span class="badge green"><span class="badge-dot"></span>Live</span>
+      </div>
+      <code style="font-size:0.82rem;margin-top:8px;display:block;">http://grafana.app.68.220.239.81.nip.io</code>
+      <p style="font-size:0.78rem;margin-top:8px;color:var(--text-dim);">Login: <code>admin</code> / <code>trophic2024</code></p>
+    </div>
+  </div>
+
+  <div class="table-wrap" style="margin-top:24px;">
+    <table>
+      <thead><tr><th>Email</th><th>Role</th><th>Password</th></tr></thead>
+      <tbody>
+        <tr><td><code>chikwex@trophictech.io</code></td><td><span class="badge blue" style="font-size:0.7rem;padding:2px 8px;"><span class="badge-dot"></span>Admin</span></td><td><code>demo1234</code></td></tr>
+        <tr><td><code>admin@trophictech.io</code></td><td><span class="badge blue" style="font-size:0.7rem;padding:2px 8px;"><span class="badge-dot"></span>Admin</span></td><td><code>demo1234</code></td></tr>
+        <tr><td><code>jamie@trophictech.io</code></td><td><span class="badge green" style="font-size:0.7rem;padding:2px 8px;"><span class="badge-dot"></span>Engineer</span></td><td><code>demo1234</code></td></tr>
+        <tr><td><code>priya@trophictech.io</code></td><td><span class="badge green" style="font-size:0.7rem;padding:2px 8px;"><span class="badge-dot"></span>Engineer</span></td><td><code>demo1234</code></td></tr>
+        <tr><td><code>client@nordstrom.com</code></td><td><span class="badge orange" style="font-size:0.7rem;padding:2px 8px;"><span class="badge-dot"></span>Viewer</span></td><td><code>demo1234</code></td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="callout green" style="margin-top:24px;">
+    <strong>Health check (live):</strong>
+    <code style="background:none;border:none;color:inherit;">curl http://app.68.220.239.81.nip.io/api/health</code>
+    → <code style="background:none;border:none;color:inherit;">{"status":"ok","db":"connected","ts":"…"}</code>
+  </div>
+</div>
+
+<hr />
+
+<!-- ══════════════════════════════════════════════════════════════════════
+     FOOTER
+════════════════════════════════════════════════════════════════════════ -->
+<div style="padding:40px 0 20px; text-align:center;">
+  <p style="font-size:0.78rem; color:var(--text-dim); line-height:2;">
+    Trophic Tech — Mission Control &nbsp;·&nbsp; Platform Engineering Report &nbsp;·&nbsp; 2026<br>
+    GitHub: <code>LycanTech/TrophicTechPro</code> &nbsp;·&nbsp;
+    Cluster: <code>trophic-staging-aks</code> (East US 2) &nbsp;·&nbsp;
+    Stack: Next.js 15 · AKS · Terraform · GitHub Actions
+  </p>
+</div>
+
+</body>
+</html>
