@@ -1,0 +1,1362 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>TrophicTechPro — CLI Command Reference</title>
+<style>
+  :root {
+    --bg: #000;
+    --surface: #1c1c1e;
+    --surface2: #2c2c2e;
+    --border: #3a3a3c;
+    --text: #f5f5f7;
+    --text-dim: #98989d;
+    --accent: #0a84ff;
+    --green: #30d158;
+    --red: #ff453a;
+    --orange: #ff9f0a;
+    --purple: #bf5af2;
+    --teal: #5ac8fa;
+    --pink: #ff375f;
+    --yellow: #ffd60a;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html { scroll-behavior: smooth; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", sans-serif;
+    font-size: 15px;
+    line-height: 1.6;
+    display: flex;
+  }
+
+  /* ── Sidebar ── */
+  nav {
+    width: 240px;
+    min-width: 240px;
+    background: var(--surface);
+    border-right: 1px solid var(--border);
+    height: 100vh;
+    position: sticky;
+    top: 0;
+    overflow-y: auto;
+    padding: 24px 0 40px;
+  }
+  nav .logo {
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--text-dim);
+    padding: 0 20px 20px;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 16px;
+  }
+  nav .logo span { color: var(--accent); }
+  nav ul { list-style: none; }
+  nav ul li a {
+    display: block;
+    padding: 7px 20px;
+    font-size: 13px;
+    color: var(--text-dim);
+    text-decoration: none;
+    border-left: 2px solid transparent;
+    transition: color 0.15s, border-color 0.15s;
+  }
+  nav ul li a:hover { color: var(--text); }
+  nav ul li a.active {
+    color: var(--accent);
+    border-left-color: var(--accent);
+    background: rgba(10,132,255,0.08);
+  }
+  nav .nav-count {
+    font-size: 11px;
+    color: var(--text-dim);
+    padding: 16px 20px 6px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+  }
+
+  /* ── Main ── */
+  main {
+    flex: 1;
+    max-width: 900px;
+    padding: 48px 56px 100px;
+    overflow-x: hidden;
+  }
+
+  /* ── Hero ── */
+  .hero {
+    margin-bottom: 56px;
+    border-bottom: 1px solid var(--border);
+    padding-bottom: 40px;
+  }
+  .hero h1 {
+    font-size: 36px;
+    font-weight: 700;
+    letter-spacing: -0.5px;
+    margin-bottom: 10px;
+  }
+  .hero h1 span { color: var(--accent); }
+  .hero p {
+    color: var(--text-dim);
+    font-size: 16px;
+    max-width: 560px;
+  }
+
+  /* ── Section headings ── */
+  .section-title {
+    font-size: 22px;
+    font-weight: 700;
+    margin-bottom: 6px;
+    padding-top: 16px;
+  }
+  .section-sub {
+    color: var(--text-dim);
+    font-size: 14px;
+    margin-bottom: 28px;
+  }
+
+  /* ── Command card ── */
+  .cmd-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    margin-bottom: 20px;
+    overflow: hidden;
+  }
+  .cmd-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 14px 18px;
+    border-bottom: 1px solid var(--border);
+    background: var(--surface2);
+  }
+  .cmd-title {
+    font-size: 14px;
+    font-weight: 600;
+    flex: 1;
+  }
+  .badge {
+    font-size: 10px;
+    font-weight: 600;
+    padding: 3px 8px;
+    border-radius: 20px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    white-space: nowrap;
+  }
+  .badge-ci    { background: rgba(10,132,255,0.18); color: var(--accent); }
+  .badge-local { background: rgba(48,209,88,0.18);  color: var(--green); }
+  .badge-azure { background: rgba(191,90,242,0.18); color: var(--purple); }
+  .badge-any   { background: rgba(255,159,10,0.18); color: var(--orange); }
+  .badge-ps    { background: rgba(90,200,250,0.18); color: var(--teal); }
+
+  pre {
+    background: #0d0d0f;
+    border-radius: 0;
+    padding: 16px 18px;
+    font-family: "SF Mono", "Fira Code", "Cascadia Code", Menlo, monospace;
+    font-size: 13px;
+    overflow-x: auto;
+    line-height: 1.7;
+  }
+  .cmd-body { padding: 16px 18px 20px; }
+  .cmd-desc { color: var(--text-dim); font-size: 14px; margin-bottom: 14px; }
+  .cmd-flags { width: 100%; border-collapse: collapse; font-size: 13px; }
+  .cmd-flags th {
+    text-align: left;
+    color: var(--text-dim);
+    font-weight: 500;
+    border-bottom: 1px solid var(--border);
+    padding: 6px 8px;
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+  }
+  .cmd-flags td {
+    padding: 7px 8px;
+    border-bottom: 1px solid rgba(255,255,255,0.04);
+    vertical-align: top;
+  }
+  .cmd-flags td:first-child {
+    font-family: "SF Mono", monospace;
+    color: var(--teal);
+    white-space: nowrap;
+    font-size: 12px;
+  }
+  .cmd-flags td:last-child { color: var(--text-dim); }
+
+  /* syntax tokens */
+  .t-cmd  { color: var(--teal); }
+  .t-flag { color: var(--pink); }
+  .t-val  { color: var(--yellow); }
+  .t-str  { color: var(--green); }
+  .t-cmt  { color: #636366; font-style: italic; }
+  .t-kw   { color: var(--purple); }
+  .t-var  { color: var(--orange); }
+
+  /* section divider */
+  .divider {
+    border: none;
+    border-top: 1px solid var(--border);
+    margin: 48px 0 40px;
+  }
+
+  @media print {
+    nav { display: none; }
+    main { max-width: 100%; padding: 24px; }
+    .cmd-card { break-inside: avoid; }
+    pre { white-space: pre-wrap; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ════════ SIDEBAR ════════ -->
+<nav id="sidebar">
+  <div class="logo"><span>Trophic</span>Tech — CLI Ref</div>
+  <div class="nav-count">Navigation</div>
+  <ul>
+    <li><a href="#git">Git</a></li>
+    <li><a href="#gh">GitHub CLI</a></li>
+    <li><a href="#npm">npm / Node.js</a></li>
+    <li><a href="#prisma">Prisma</a></li>
+    <li><a href="#az-auth">Azure Auth</a></li>
+    <li><a href="#az-aks">Azure AKS</a></li>
+    <li><a href="#az-nsg">Azure NSG</a></li>
+    <li><a href="#az-pg">Azure PostgreSQL</a></li>
+    <li><a href="#az-kv">Azure Key Vault</a></li>
+    <li><a href="#kubectl-inspect">kubectl — Inspect</a></li>
+    <li><a href="#kubectl-apply">kubectl — Apply</a></li>
+    <li><a href="#kubectl-exec">kubectl — Exec</a></li>
+    <li><a href="#kubectl-jobs">kubectl — Jobs</a></li>
+    <li><a href="#helm">Helm</a></li>
+    <li><a href="#docker">Docker</a></li>
+    <li><a href="#curl">curl</a></li>
+    <li><a href="#terraform">Terraform</a></li>
+  </ul>
+</nav>
+
+<!-- ════════ MAIN ════════ -->
+<main>
+
+  <div class="hero">
+    <h1>CLI <span>Command Reference</span></h1>
+    <p>Every command used to build, test, ship, and debug the TrophicTechPro Mission Control platform — with explanations and flag breakdowns.</p>
+  </div>
+
+  <!-- ── GIT ── -->
+  <section id="git">
+    <div class="section-title">Git</div>
+    <div class="section-sub">Version control operations run locally and inside GitHub Actions runners.</div>
+
+    <div class="cmd-card">
+      <div class="cmd-header">
+        <div class="cmd-title">Clone repository</div>
+        <span class="badge badge-local">Local</span>
+      </div>
+      <pre><span class="t-cmd">git</span> <span class="t-kw">clone</span> <span class="t-val">https://github.com/org/trophic-mission-control.git</span></pre>
+      <div class="cmd-body">
+        <div class="cmd-desc">Downloads the full repository history to your local machine.</div>
+        <table class="cmd-flags"><thead><tr><th>Flag / Arg</th><th>Purpose</th></tr></thead><tbody>
+          <tr><td>&lt;url&gt;</td><td>HTTPS URL of the remote repository</td></tr>
+        </tbody></table>
+      </div>
+    </div>
+
+    <div class="cmd-card">
+      <div class="cmd-header">
+        <div class="cmd-title">Create and switch to a new branch</div>
+        <span class="badge badge-local">Local</span>
+      </div>
+      <pre><span class="t-cmd">git</span> <span class="t-kw">checkout</span> <span class="t-flag">-b</span> <span class="t-val">fix/ensure-prod-db-running</span></pre>
+      <div class="cmd-body">
+        <div class="cmd-desc">Creates a new branch from the current HEAD and immediately switches to it. Used for every bug-fix branch in this project.</div>
+        <table class="cmd-flags"><thead><tr><th>Flag</th><th>Purpose</th></tr></thead><tbody>
+          <tr><td>-b</td><td>Create the branch before switching (shorthand for <code>git branch &lt;name&gt; &amp;&amp; git checkout &lt;name&gt;</code>)</td></tr>
+        </tbody></table>
+      </div>
+    </div>
+
+    <div class="cmd-card">
+      <div class="cmd-header">
+        <div class="cmd-title">Stage specific files</div>
+        <span class="badge badge-local">Local</span>
+      </div>
+      <pre><span class="t-cmd">git</span> <span class="t-kw">add</span> <span class="t-val">.github/workflows/main.yml prisma/seed.mjs</span></pre>
+      <div class="cmd-body">
+        <div class="cmd-desc">Stages only the listed files for the next commit. More precise than <code>git add .</code> — avoids accidentally including build artifacts or secrets.</div>
+      </div>
+    </div>
+
+    <div class="cmd-card">
+      <div class="cmd-header">
+        <div class="cmd-title">Commit staged changes</div>
+        <span class="badge badge-local">Local</span>
+      </div>
+      <pre><span class="t-cmd">git</span> <span class="t-kw">commit</span> <span class="t-flag">-m</span> <span class="t-str">"fix(ci): ensure production PostgreSQL is running before migrations"</span></pre>
+      <div class="cmd-body">
+        <div class="cmd-desc">Records the staged snapshot with a Conventional Commits message. Commit messages follow the <code>type(scope): description</code> format used throughout this project.</div>
+        <table class="cmd-flags"><thead><tr><th>Flag</th><th>Purpose</th></tr></thead><tbody>
+          <tr><td>-m</td><td>Inline commit message (bypasses editor)</td></tr>
+        </tbody></table>
+      </div>
+    </div>
+
+    <div class="cmd-card">
+      <div class="cmd-header">
+        <div class="cmd-title">Push branch to remote</div>
+        <span class="badge badge-local">Local</span>
+      </div>
+      <pre><span class="t-cmd">git</span> <span class="t-kw">push</span> <span class="t-val">origin dev</span>
+<span class="t-cmd">git</span> <span class="t-kw">push</span> <span class="t-flag">--set-upstream</span> <span class="t-val">origin fix/ensure-prod-db-running</span></pre>
+      <div class="cmd-body">
+        <div class="cmd-desc">Uploads commits to the remote. <code>--set-upstream</code> (or <code>-u</code>) links the local branch to the remote tracking branch so future pushes need only <code>git push</code>.</div>
+        <table class="cmd-flags"><thead><tr><th>Flag</th><th>Purpose</th></tr></thead><tbody>
+          <tr><td>--set-upstream / -u</td><td>Set the upstream tracking reference on first push</td></tr>
+        </tbody></table>
+      </div>
+    </div>
+
+    <div class="cmd-card">
+      <div class="cmd-header">
+        <div class="cmd-title">Resolve merge conflict — keep current version</div>
+        <span class="badge badge-local">Local</span>
+      </div>
+      <pre><span class="t-cmd">git</span> <span class="t-kw">checkout</span> <span class="t-flag">--ours</span> <span class="t-val">.github/workflows/main.yml</span>
+<span class="t-cmd">git</span> <span class="t-kw">add</span> <span class="t-val">.github/workflows/main.yml</span>
+<span class="t-cmd">git</span> <span class="t-kw">commit</span> <span class="t-flag">-m</span> <span class="t-str">"fix(ci): resolve merge conflict — keep kubectl exec smoke test"</span></pre>
+      <div class="cmd-body">
+        <div class="cmd-desc">During a <code>git merge</code>, <code>--ours</code> discards the incoming changes and keeps the HEAD version entirely. Used to keep the kubectl-exec smoke test when merging main's retry-loop version.</div>
+        <table class="cmd-flags"><thead><tr><th>Flag</th><th>Purpose</th></tr></thead><tbody>
+          <tr><td>--ours</td><td>Accept the current branch's version of the conflicting file</td></tr>
+          <tr><td>--theirs</td><td>Accept the incoming branch's version instead</td></tr>
+        </tbody></table>
+      </div>
+    </div>
+
+    <div class="cmd-card">
+      <div class="cmd-header">
+        <div class="cmd-title">View commit log</div>
+        <span class="badge badge-local">Local</span>
+      </div>
+      <pre><span class="t-cmd">git</span> <span class="t-kw">log</span> <span class="t-flag">--oneline</span> <span class="t-flag">-10</span></pre>
+      <div class="cmd-body">
+        <div class="cmd-desc">Displays the last 10 commits in a compact one-line format showing SHA and message. Used to verify commits landed correctly after pushing.</div>
+        <table class="cmd-flags"><thead><tr><th>Flag</th><th>Purpose</th></tr></thead><tbody>
+          <tr><td>--oneline</td><td>Abbreviate each commit to one line (short SHA + message)</td></tr>
+          <tr><td>-N</td><td>Limit output to N most recent commits</td></tr>
+        </tbody></table>
+      </div>
+    </div>
+  </section>
+
+  <hr class="divider" />
+
+  <!-- ── GITHUB CLI ── -->
+  <section id="gh">
+    <div class="section-title">GitHub CLI</div>
+    <div class="section-sub">Open PRs, trigger workflows, and inspect CI status from the terminal.</div>
+
+    <div class="cmd-card">
+      <div class="cmd-header">
+        <div class="cmd-title">Open a pull request</div>
+        <span class="badge badge-local">Local</span>
+      </div>
+      <pre><span class="t-cmd">gh</span> <span class="t-kw">pr create</span> \
+  <span class="t-flag">--base</span> <span class="t-val">main</span> \
+  <span class="t-flag">--head</span> <span class="t-val">dev</span> \
+  <span class="t-flag">--title</span> <span class="t-str">"fix(ci): production health check via kubectl exec"</span> \
+  <span class="t-flag">--body</span> <span class="t-str">"Replaces curl over nip.io with in-cluster kubectl exec"</span></pre>
+      <div class="cmd-body">
+        <div class="cmd-desc">Creates a pull request from <code>--head</code> into <code>--base</code>. With branch protection on <code>main</code>, all changes go through PRs — this command was used for PRs #34–#37.</div>
+        <table class="cmd-flags"><thead><tr><th>Flag</th><th>Purpose</th></tr></thead><tbody>
+          <tr><td>--base</td><td>Target branch to merge into</td></tr>
+          <tr><td>--head</td><td>Source branch containing the changes</td></tr>
+          <tr><td>--title</td><td>PR title (shown in GitHub UI)</td></tr>
+          <tr><td>--body</td><td>PR description body text</td></tr>
+        </tbody></table>
+      </div>
+    </div>
+
+    <div class="cmd-card">
+      <div class="cmd-header">
+        <div class="cmd-title">Trigger a workflow manually</div>
+        <span class="badge badge-local">Local</span>
+      </div>
+      <pre><span class="t-cmd">gh</span> <span class="t-kw">workflow run</span> <span class="t-val">main.yml</span> <span class="t-flag">--ref</span> <span class="t-val">main</span></pre>
+      <div class="cmd-body">
+        <div class="cmd-desc">Dispatches a <code>workflow_dispatch</code> event to re-run the pipeline on a specific branch without pushing new commits. Used to re-test the production deploy after fixing NSG rules.</div>
+        <table class="cmd-flags"><thead><tr><th>Flag</th><th>Purpose</th></tr></thead><tbody>
+          <tr><td>--ref</td><td>Branch or tag to run the workflow on</td></tr>
+        </tbody></table>
+      </div>
+    </div>
+
+    <div class="cmd-card">
+      <div class="cmd-header">
+        <div class="cmd-title">List recent workflow runs</div>
+        <span class="badge badge-local">Local</span>
+      </div>
+      <pre><span class="t-cmd">gh</span> <span class="t-kw">run list</span> <span class="t-flag">--limit</span> <span class="t-val">5</span></pre>
+      <div class="cmd-body">
+        <div class="cmd-desc">Shows the most recent CI runs with their status (completed/in_progress/queued) and conclusion (success/failure). Quick triage tool after a push.</div>
+      </div>
+    </div>
+
+    <div class="cmd-card">
+      <div class="cmd-header">
+        <div class="cmd-title">Watch a workflow run live</div>
+        <span class="badge badge-local">Local</span>
+      </div>
+      <pre><span class="t-cmd">gh</span> <span class="t-kw">run watch</span> <span class="t-val">12345678</span></pre>
+      <div class="cmd-body">
+        <div class="cmd-desc">Streams live log output for a specific run ID. Equivalent to watching the GitHub Actions UI but in the terminal.</div>
+      </div>
+    </div>
+
+    <div class="cmd-card">
+      <div class="cmd-header">
+        <div class="cmd-title">Merge a pull request</div>
+        <span class="badge badge-local">Local</span>
+      </div>
+      <pre><span class="t-cmd">gh</span> <span class="t-kw">pr merge</span> <span class="t-val">35</span> <span class="t-flag">--squash</span> <span class="t-flag">--delete-branch</span></pre>
+      <div class="cmd-body">
+        <div class="cmd-desc">Merges PR #35 using squash strategy (collapses all commits into one on main) and deletes the source branch afterwards. All PRs in this project use squash merges.</div>
+        <table class="cmd-flags"><thead><tr><th>Flag</th><th>Purpose</th></tr></thead><tbody>
+          <tr><td>--squash</td><td>Squash all commits into a single commit on the base branch</td></tr>
+          <tr><td>--delete-branch</td><td>Delete the source branch after merging</td></tr>
+          <tr><td>--merge</td><td>Merge commit (alternative strategy)</td></tr>
+          <tr><td>--rebase</td><td>Rebase strategy (alternative)</td></tr>
+        </tbody></table>
+      </div>
+    </div>
+  </section>
+
+  <hr class="divider" />
+
+  <!-- ── NPM ── -->
+  <section id="npm">
+    <div class="section-title">npm / Node.js</div>
+    <div class="section-sub">Dependency management, dev server, and build commands.</div>
+
+    <div class="cmd-card">
+      <div class="cmd-header">
+        <div class="cmd-title">Install dependencies (CI)</div>
+        <span class="badge badge-ci">CI</span>
+      </div>
+      <pre><span class="t-cmd">npm</span> <span class="t-kw">ci</span></pre>
+      <div class="cmd-body">
+        <div class="cmd-desc">Installs exact versions from <code>package-lock.json</code>, deleting <code>node_modules</code> first. Faster and more deterministic than <code>npm install</code> — used in every GitHub Actions job.</div>
+      </div>
+    </div>
+
+    <div class="cmd-card">
+      <div class="cmd-header">
+        <div class="cmd-title">Run unit and integration tests</div>
+        <span class="badge badge-ci">CI</span>
+      </div>
+      <pre><span class="t-cmd">npm</span> <span class="t-kw">test</span> <span class="t-flag">--</span> <span class="t-flag">--coverage</span> <span class="t-flag">--coverageReporters=lcov</span></pre>
+      <div class="cmd-body">
+        <div class="cmd-desc">Runs the Jest test suite with coverage collection. The <code>lcov</code> reporter produces a <code>coverage/lcov.info</code> file that Codecov uploads for tracking.</div>
+        <table class="cmd-flags"><thead><tr><th>Flag</th><th>Purpose</th></tr></thead><tbody>
+          <tr><td>--coverage</td><td>Collect and report code coverage</td></tr>
+          <tr><td>--coverageReporters=lcov</td><td>Output coverage in LCOV format for Codecov</td></tr>
+        </tbody></table>
+      </div>
+    </div>
+
+    <div class="cmd-card">
+      <div class="cmd-header">
+        <div class="cmd-title">Production build</div>
+        <span class="badge badge-ci">CI</span>
+      </div>
+      <pre><span class="t-cmd">npm</span> <span class="t-kw">run build</span></pre>
+      <div class="cmd-body">
+        <div class="cmd-desc">Runs the Next.js build pipeline: TypeScript compilation, route optimisation, static generation. Fails on type errors, blocking the Docker build job.</div>
+      </div>
+    </div>
+
+    <div class="cmd-card">
+      <div class="cmd-header">
+        <div class="cmd-title">Run seed script directly</div>
+        <span class="badge badge-ci">CI</span>
+      </div>
+      <pre><span class="t-cmd">node</span> <span class="t-val">prisma/seed.mjs</span></pre>
+      <div class="cmd-body">
+        <div class="cmd-desc">Executes the ES-module seed file directly with Node.js. Used inside the Kubernetes migration Job after <code>prisma migrate deploy</code> completes. The <code>.mjs</code> extension tells Node to treat the file as an ES module without needing <code>"type":"module"</code> in package.json.</div>
+      </div>
+    </div>
+  </section>
+
+  <hr class="divider" />
+
+  <!-- ── PRISMA ── -->
+  <section id="prisma">
+    <div class="section-title">Prisma</div>
+    <div class="section-sub">Schema migration and client generation for the PostgreSQL database.</div>
+
+    <div class="cmd-card">
+      <div class="cmd-header">
+        <div class="cmd-title">Apply pending migrations (production)</div>
+        <span class="badge badge-ci">CI</span>
+      </div>
+      <pre><span class="t-cmd">npx prisma</span> <span class="t-kw">migrate deploy</span></pre>
+      <div class="cmd-body">
+        <div class="cmd-desc">Applies all pending SQL migrations from <code>prisma/migrations/</code> to the target database. Unlike <code>migrate dev</code>, it never creates new migrations — safe for production use inside Kubernetes Jobs.</div>
+      </div>
+    </div>
+
+    <div class="cmd-card">
+      <div class="cmd-header">
+        <div class="cmd-title">Generate Prisma client</div>
+        <span class="badge badge-ci">CI</span>
+      </div>
+      <pre><span class="t-cmd">npx prisma</span> <span class="t-kw">generate</span></pre>
+      <div class="cmd-body">
+        <div class="cmd-desc">Generates TypeScript types and the query-builder client from <code>prisma/schema.prisma</code>. Run during Docker build so the generated client is baked into the image.</div>
+      </div>
+    </div>
+
+    <div class="cmd-card">
+      <div class="cmd-header">
+        <div class="cmd-title">Create a new migration (local dev)</div>
+        <span class="badge badge-local">Local</span>
+      </div>
+      <pre><span class="t-cmd">npx prisma</span> <span class="t-kw">migrate dev</span> <span class="t-flag">--name</span> <span class="t-val">add_deployment_table</span></pre>
+      <div class="cmd-body">
+        <div class="cmd-desc">Diffs the schema against the local database, generates a new SQL migration file, and applies it. Only used during local development — never in CI.</div>
+        <table class="cmd-flags"><thead><tr><th>Flag</th><th>Purpose</th></tr></thead><tbody>
+          <tr><td>--name</td><td>Name suffix for the migration file (e.g. <code>20240101_add_deployment_table.sql</code>)</td></tr>
+        </tbody></table>
+      </div>
+    </div>
+
+    <div class="cmd-card">
+      <div class="cmd-header">
+        <div class="cmd-title">Inspect database schema</div>
+        <span class="badge badge-local">Local</span>
+      </div>
+      <pre><span class="t-cmd">npx prisma</span> <span class="t-kw">studio</span></pre>
+      <div class="cmd-body">
+        <div class="cmd-desc">Opens a browser-based GUI at <code>localhost:5555</code> for browsing and editing database records. Used to verify seed data landed correctly.</div>
+      </div>
+    </div>
+  </section>
+
+  <hr class="divider" />
+
+  <!-- ── AZURE AUTH ── -->
+  <section id="az-auth">
+    <div class="section-title">Azure Auth</div>
+    <div class="section-sub">OIDC-based authentication used in CI and interactive login for local operations.</div>
+
+    <div class="cmd-card">
+      <div class="cmd-header">
+        <div class="cmd-title">OIDC login (GitHub Actions)</div>
+        <span class="badge badge-ci">CI</span>
+      </div>
+      <pre><span class="t-cmd">az login</span> \
+  <span class="t-flag">--service-principal</span> \
+  <span class="t-flag">--username</span> <span class="t-var">${{ secrets.AZURE_CLIENT_ID }}</span> \
+  <span class="t-flag">--tenant</span>   <span class="t-var">${{ secrets.AZURE_TENANT_ID }}</span> \
+  <span class="t-flag">--federated-token</span> <span class="t-var">$ACTIONS_ID_TOKEN_REQUEST_TOKEN</span></pre>
+      <div class="cmd-body">
+        <div class="cmd-desc">Authenticates the CI runner to Azure using a GitHub-issued OIDC JWT — no stored passwords or client secrets. Requires the <code>id-token: write</code> permission in the workflow.</div>
+        <table class="cmd-flags"><thead><tr><th>Flag</th><th>Purpose</th></tr></thead><tbody>
+          <tr><td>--service-principal</td><td>Log in as a service principal, not a user</td></tr>
+          <tr><td>--federated-token</td><td>OIDC JWT from the GitHub token endpoint</td></tr>
+          <tr><td>--tenant</td><td>Azure Active Directory tenant ID</td></tr>
+        </tbody></table>
+      </div>
+    </div>
+
+    <div class="cmd-card">
+      <div class="cmd-header">
+        <div class="cmd-title">Interactive login (local)</div>
+        <span class="badge badge-local">Local</span>
+      </div>
+      <pre><span class="t-cmd">az login</span></pre>
+      <div class="cmd-body">
+        <div class="cmd-desc">Opens a browser window for interactive Azure AD authentication. Required before running any <code>az</code> commands locally against the subscription.</div>
+      </div>
+    </div>
+
+    <div class="cmd-card">
+      <div class="cmd-header">
+        <div class="cmd-title">Set active subscription</div>
+        <span class="badge badge-any">Any</span>
+      </div>
+      <pre><span class="t-cmd">az account set</span> <span class="t-flag">--subscription</span> <span class="t-var">${{ secrets.AZURE_SUBSCRIPTION_ID }}</span></pre>
+      <div class="cmd-body">
+        <div class="cmd-desc">Pins the CLI to a specific subscription so all subsequent commands target the correct account. Run after every <code>az login</code> in CI.</div>
+      </div>
+    </div>
+
+    <div class="cmd-card">
+      <div class="cmd-header">
+        <div class="cmd-title">Log in to Azure Container Registry</div>
+        <span class="badge badge-ci">CI</span>
+      </div>
+      <pre><span class="t-cmd">az acr login</span> <span class="t-flag">--name</span> <span class="t-var">${{ secrets.ACR_REGISTRY }}</span></pre>
+      <div class="cmd-body">
+        <div class="cmd-desc">Authenticates Docker to push/pull images from Azure Container Registry using the current Azure CLI credentials. Called before <code>docker build</code> and <code>docker push</code>.</div>
+      </div>
+    </div>
+  </section>
+
+  <hr class="divider" />
+
+  <!-- ── AZURE AKS ── -->
+  <section id="az-aks">
+    <div class="section-title">Azure AKS</div>
+    <div class="section-sub">Cluster access and node pool management for the Kubernetes workloads.</div>
+
+    <div class="cmd-card">
+      <div class="cmd-header">
+        <div class="cmd-title">Fetch AKS kubeconfig credentials</div>
+        <span class="badge badge-ci">CI</span>
+      </div>
+      <pre><span class="t-cmd">az aks get-credentials</span> \
+  <span class="t-flag">--resource-group</span> <span class="t-var">${{ secrets.AKS_RESOURCE_GROUP }}</span> \
+  <span class="t-flag">--name</span>           <span class="t-var">${{ secrets.AKS_CLUSTER }}</span> \
+  <span class="t-flag">--overwrite-existing</span></pre>
+      <div class="cmd-body">
+        <div class="cmd-desc">Merges the AKS cluster's connection details into <code>~/.kube/config</code>, enabling <code>kubectl</code> and <code>helm</code> to reach the cluster. <code>--overwrite-existing</code> ensures stale credentials from a previous run are replaced.</div>
+        <table class="cmd-flags"><thead><tr><th>Flag</th><th>Purpose</th></tr></thead><tbody>
+          <tr><td>--resource-group</td><td>Azure resource group containing the cluster</td></tr>
+          <tr><td>--name</td><td>AKS cluster name</td></tr>
+          <tr><td>--overwrite-existing</td><td>Replace cached credentials without prompting</td></tr>
+        </tbody></table>
+      </div>
+    </div>
+
+    <div class="cmd-card">
+      <div class="cmd-header">
+        <div class="cmd-title">List node pools</div>
+        <span class="badge badge-local">Local</span>
+      </div>
+      <pre><span class="t-cmd">az aks nodepool list</span> \
+  <span class="t-flag">--resource-group</span> <span class="t-val">trophic-prod-rg</span> \
+  <span class="t-flag">--cluster-name</span>   <span class="t-val">trophic-aks</span> \
+  <span class="t-flag">--output</span> <span class="t-val">table</span></pre>
+      <div class="cmd-body">
+        <div class="cmd-desc">Lists all node pools with their mode (System/User), VM size, and node count. Used to discover the dual-nodepool setup (system + app) that caused the 50% traffic-drop bug.</div>
+      </div>
+    </div>
+
+    <div class="cmd-card">
+      <div class="cmd-header">
+        <div class="cmd-title">Show AKS cluster details</div>
+        <span class="badge badge-ci">CI</span>
+      </div>
+      <pre><span class="t-cmd">az aks show</span> \
+  <span class="t-flag">--resource-group</span> <span class="t-var">${{ env.AKS_RESOURCE_GROUP }}</span> \
+  <span class="t-flag">--name</span>           <span class="t-var">${{ env.AKS_CLUSTER }}</span> \
+  <span class="t-flag">--query</span> <span class="t-str">"powerState.code"</span> \
+  <span class="t-flag">--output</span> <span class="t-val">tsv</span></pre>
+      <div class="cmd-body">
+        <div class="cmd-desc">Returns the cluster's power state (<code>Running</code> / <code>Stopped</code>). Used in the workflow gate to confirm AKS is healthy before attempting a deployment.</div>
+        <table class="cmd-flags"><thead><tr><th>Flag</th><th>Purpose</th></tr></thead><tbody>
+          <tr><td>--query</td><td>JMESPath expression to extract a specific field from the JSON response</td></tr>
+          <tr><td>--output tsv</td><td>Tab-separated output — clean for shell variable assignment</td></tr>
+        </tbody></table>
+      </div>
+    </div>
+  </section>
+
+  <hr class="divider" />
+
+  <!-- ── AZURE NSG ── -->
+  <section id="az-nsg">
+    <div class="section-title">Azure NSG</div>
+    <div class="section-sub">Network Security Group rules that gate public HTTP/HTTPS traffic to the AKS nodes.</div>
+
+    <div class="cmd-card">
+      <div class="cmd-header">
+        <div class="cmd-title">List NSG rules</div>
+        <span class="badge badge-local">Local</span>
+      </div>
+      <pre><span class="t-cmd">az network nsg rule list</span> \
+  <span class="t-flag">--resource-group</span> <span class="t-val">MC_trophic-prod-rg_trophic-aks_eastus</span> \
+  <span class="t-flag">--nsg-name</span>       <span class="t-val">trophic-prod-nsg-aks-app</span> \
+  <span class="t-flag">--output</span> <span class="t-val">table</span></pre>
+      <div class="cmd-body">
+        <div class="cmd-desc">Dumps all inbound and outbound rules for an NSG in table format. Used to diagnose why external browsers hit <code>ERR_CONNECTION_TIMED_OUT</code> — the existing rule targeted the LB public IP, which Azure had already DNAT'd away by the time the NSG evaluated traffic.</div>
+      </div>
+    </div>
+
+    <div class="cmd-card">
+      <div class="cmd-header">
+        <div class="cmd-title">Add HTTP/HTTPS inbound rule</div>
+        <span class="badge badge-local">Local</span>
+      </div>
+      <pre><span class="t-cmd">az network nsg rule create</span> \
+  <span class="t-flag">--resource-group</span>        <span class="t-val">MC_trophic-prod-rg_trophic-aks_eastus</span> \
+  <span class="t-flag">--nsg-name</span>              <span class="t-val">trophic-prod-nsg-aks-app</span> \
+  <span class="t-flag">--name</span>                  <span class="t-val">allow-http-https-inbound</span> \
+  <span class="t-flag">--priority</span>             <span class="t-val">400</span> \
+  <span class="t-flag">--direction</span>            <span class="t-val">Inbound</span> \
+  <span class="t-flag">--access</span>               <span class="t-val">Allow</span> \
+  <span class="t-flag">--protocol</span>             <span class="t-val">Tcp</span> \
+  <span class="t-flag">--source-address-prefix</span> <span class="t-val">Internet</span> \
+  <span class="t-flag">--destination-address-prefix</span> <span class="t-val">"*"</span> \
+  <span class="t-flag">--destination-port-ranges</span>    <span class="t-val">80 443 31000-32767</span></pre>
+      <div class="cmd-body">
+        <div class="cmd-desc">The critical rule that fixed public connectivity. Destination <code>"*"</code> matches any IP — necessary because Azure evaluates NSG rules after DNAT, so the destination is already the node's private IP, not the load balancer's public IP. NodePort range <code>31000-32767</code> allows NGINX ingress traffic.</div>
+        <table class="cmd-flags"><thead><tr><th>Flag</th><th>Purpose</th></tr></thead><tbody>
+          <tr><td>--priority</td><td>Lower number = higher priority (100–4096)</td></tr>
+          <tr><td>--source-address-prefix Internet</td><td>Allow traffic from any public IP</td></tr>
+          <tr><td>--destination-address-prefix *</td><td>Match any destination IP (post-DNAT node IP)</td></tr>
+          <tr><td>--destination-port-ranges</td><td>Space-separated list of ports or ranges</td></tr>
+        </tbody></table>
+      </div>
+    </div>
+
+    <div class="cmd-card">
+      <div class="cmd-header">
+        <div class="cmd-title">Add rule to system nodepool NSG</div>
+        <span class="badge badge-local">Local</span>
+      </div>
+      <pre><span class="t-cmd">az network nsg rule create</span> \
+  <span class="t-flag">--resource-group</span>             <span class="t-val">MC_trophic-prod-rg_trophic-aks_eastus</span> \
+  <span class="t-flag">--nsg-name</span>                   <span class="t-val">trophic-prod-nsg-aks-system</span> \
+  <span class="t-flag">--name</span>                       <span class="t-val">AllowHTTPFromInternet</span> \
+  <span class="t-flag">--priority</span>                   <span class="t-val">200</span> \
+  <span class="t-flag">--direction</span>                  <span class="t-val">Inbound</span> \
+  <span class="t-flag">--access</span>                     <span class="t-val">Allow</span> \
+  <span class="t-flag">--protocol</span>                   <span class="t-val">Tcp</span> \
+  <span class="t-flag">--source-address-prefix</span>      <span class="t-val">Internet</span> \
+  <span class="t-flag">--destination-address-prefix</span> <span class="t-val">"*"</span> \
+  <span class="t-flag">--destination-port-ranges</span>    <span class="t-val">80 443</span></pre>
+      <div class="cmd-body">
+        <div class="cmd-desc">Without <code>externalTrafficPolicy=Local</code>, the Azure LB distributed traffic to both the system and app nodepools. ~50% of requests hit system nodes whose NSG had a blanket <code>DenyInternetInbound</code> rule. This command (and a matching NodePort rule) unblocked traffic on system nodes as an emergency fix while the permanent <code>externalTrafficPolicy=Local</code> solution was deployed.</div>
+      </div>
+    </div>
+  </section>
+
+  <hr class="divider" />
+
+  <!-- ── AZURE POSTGRESQL ── -->
+  <section id="az-pg">
+    <div class="section-title">Azure PostgreSQL</div>
+    <div class="section-sub">Flexible Server status checks used as a pre-flight gate before migrations.</div>
+
+    <div class="cmd-card">
+      <div class="cmd-header">
+        <div class="cmd-title">Check PostgreSQL server state</div>
+        <span class="badge badge-ci">CI</span>
+      </div>
+      <pre><span class="t-cmd">az postgres flexible-server show</span> \
+  <span class="t-flag">--resource-group</span> <span class="t-var">${{ env.PROD_RG }}</span> \
+  <span class="t-flag">--name</span>           <span class="t-var">${{ env.PG_SERVER }}</span> \
+  <span class="t-flag">--query</span>          <span class="t-str">"state"</span> \
+  <span class="t-flag">--output</span>         <span class="t-val">tsv</span></pre>
+      <div class="cmd-body">
+        <div class="cmd-desc">Returns the server state string (<code>Ready</code> / <code>Stopped</code> / <code>Starting</code>). The CI workflow gates on <code>== "Ready"</code> before running Prisma migrations — prevents a cryptic <code>connect ECONNREFUSED</code> from the migration Job.</div>
+        <table class="cmd-flags"><thead><tr><th>Flag</th><th>Purpose</th></tr></thead><tbody>
+          <tr><td>flexible-server show</td><td>Gets details for a Flexible Server instance (not the legacy Single Server)</td></tr>
+          <tr><td>--query "state"</td><td>JMESPath extracts just the state field from the JSON blob</td></tr>
+          <tr><td>--output tsv</td><td>Plain text — suitable for <code>if [ "$STATE" = "Ready" ]</code> shell logic</td></tr>
+        </tbody></table>
+      </div>
+    </div>
+
+    <div class="cmd-card">
+      <div class="cmd-header">
+        <div class="cmd-title">Start a stopped PostgreSQL server</div>
+        <span class="badge badge-ci">CI</span>
+      </div>
+      <pre><span class="t-cmd">az postgres flexible-server start</span> \
+  <span class="t-flag">--resource-group</span> <span class="t-var">${{ env.PROD_RG }}</span> \
+  <span class="t-flag">--name</span>           <span class="t-var">${{ env.PG_SERVER }}</span></pre>
+      <div class="cmd-body">
+        <div class="cmd-desc">Starts the server if the state check returns anything other than <code>Ready</code>. The CI workflow then polls every 15 seconds (up to 10 minutes) for the state to become <code>Ready</code> before proceeding.</div>
+      </div>
+    </div>
+  </section>
+
+  <hr class="divider" />
+
+  <!-- ── AZURE KEY VAULT ── -->
+  <section id="az-kv">
+    <div class="section-title">Azure Key Vault</div>
+    <div class="section-sub">Secret retrieval piped into Kubernetes secrets before each deployment.</div>
+
+    <div class="cmd-card">
+      <div class="cmd-header">
+        <div class="cmd-title">Read a secret value</div>
+        <span class="badge badge-ci">CI</span>
+      </div>
+      <pre><span class="t-cmd">az keyvault secret show</span> \
+  <span class="t-flag">--vault-name</span> <span class="t-val">trophic-prod-kv</span> \
+  <span class="t-flag">--name</span>       <span class="t-val">DATABASE-URL</span> \
+  <span class="t-flag">--query</span>      <span class="t-str">"value"</span> \
+  <span class="t-flag">--output</span>     <span class="t-val">tsv</span></pre>
+      <div class="cmd-body">
+        <div class="cmd-desc">Retrieves a secret value from Azure Key Vault. Used in the "Pull KV Secrets" CI step — the output is piped into a <code>kubectl create secret generic</code> command to inject database credentials into the cluster without storing them in the workflow file.</div>
+      </div>
+    </div>
+
+    <div class="cmd-card">
+      <div class="cmd-header">
+        <div class="cmd-title">Create Kubernetes secret from KV values</div>
+        <span class="badge badge-ci">CI</span>
+      </div>
+      <pre><span class="t-cmd">kubectl create secret generic</span> <span class="t-val">app-secrets</span> \
+  <span class="t-flag">--namespace</span>         <span class="t-var">$NS</span> \
+  <span class="t-flag">--from-literal</span>      <span class="t-val">DATABASE_URL</span>=<span class="t-var">$(az keyvault secret show ...)</span> \
+  <span class="t-flag">--from-literal</span>      <span class="t-val">NEXTAUTH_SECRET</span>=<span class="t-var">$(az keyvault secret show ...)</span> \
+  <span class="t-flag">--dry-run=client</span> <span class="t-flag">-o</span> <span class="t-val">yaml</span> | <span class="t-cmd">kubectl apply</span> <span class="t-flag">-f</span> <span class="t-val">-</span></pre>
+      <div class="cmd-body">
+        <div class="cmd-desc">Combines Key Vault reads with a Kubernetes secret upsert. The <code>--dry-run=client -o yaml | kubectl apply</code> pattern is idempotent — it creates or updates the secret without throwing an error on re-runs.</div>
+        <table class="cmd-flags"><thead><tr><th>Flag</th><th>Purpose</th></tr></thead><tbody>
+          <tr><td>--from-literal</td><td>Inject a key=value pair directly (not from a file)</td></tr>
+          <tr><td>--dry-run=client</td><td>Generate the YAML manifest without sending it to the API server</td></tr>
+          <tr><td>-o yaml | kubectl apply -f -</td><td>Pipe the generated manifest back into kubectl for an upsert</td></tr>
+        </tbody></table>
+      </div>
+    </div>
+  </section>
+
+  <hr class="divider" />
+
+  <!-- ── KUBECTL INSPECT ── -->
+  <section id="kubectl-inspect">
+    <div class="section-title">kubectl — Inspect</div>
+    <div class="section-sub">Querying cluster state for troubleshooting and deployment verification.</div>
+
+    <div class="cmd-card">
+      <div class="cmd-header">
+        <div class="cmd-title">List pods in a namespace</div>
+        <span class="badge badge-any">Any</span>
+      </div>
+      <pre><span class="t-cmd">kubectl get pods</span> <span class="t-flag">-n</span> <span class="t-val">trophic-prod</span> <span class="t-flag">-o</span> <span class="t-val">wide</span></pre>
+      <div class="cmd-body">
+        <div class="cmd-desc">Lists all pods with their status, restart count, and node assignment. The <code>-o wide</code> flag adds IP addresses and the node each pod is scheduled on — useful for verifying which nodepool is serving traffic.</div>
+        <table class="cmd-flags"><thead><tr><th>Flag</th><th>Purpose</th></tr></thead><tbody>
+          <tr><td>-n</td><td>Target namespace (default is <code>default</code>)</td></tr>
+          <tr><td>-o wide</td><td>Extra columns: node name, pod IP, nominated node</td></tr>
+          <tr><td>--watch / -w</td><td>Stream updates in real time</td></tr>
+        </tbody></table>
+      </div>
+    </div>
+
+    <div class="cmd-card">
+      <div class="cmd-header">
+        <div class="cmd-title">Get pod name with label selector</div>
+        <span class="badge badge-ci">CI</span>
+      </div>
+      <pre><span class="t-cmd">kubectl get pods</span> <span class="t-flag">-n</span> <span class="t-var">$NS</span> \
+  <span class="t-flag">-l</span> <span class="t-str">"app.kubernetes.io/name=trophic-mission-control"</span> \
+  <span class="t-flag">--field-selector</span> <span class="t-val">status.phase=Running</span> \
+  <span class="t-flag">-o</span> <span class="t-val">jsonpath='{.items[0].metadata.name}'</span></pre>
+      <div class="cmd-body">
+        <div class="cmd-desc">Selects pods by Helm label and phase, returning just the first pod's name. Used in CI smoke tests and health checks to dynamically resolve which pod to exec into — avoids hardcoding pod names that change on every deploy.</div>
+        <table class="cmd-flags"><thead><tr><th>Flag</th><th>Purpose</th></tr></thead><tbody>
+          <tr><td>-l</td><td>Label selector — filter pods by key=value labels</td></tr>
+          <tr><td>--field-selector</td><td>Server-side filter on fields like <code>status.phase</code></td></tr>
+          <tr><td>-o jsonpath</td><td>Extract a specific field using JSONPath syntax</td></tr>
+        </tbody></table>
+      </div>
+    </div>
+
+    <div class="cmd-card">
+      <div class="cmd-header">
+        <div class="cmd-title">Describe a resource</div>
+        <span class="badge badge-any">Any</span>
+      </div>
+      <pre><span class="t-cmd">kubectl describe pod</span> <span class="t-val">trophic-app-7f9d8b-xkqv2</span> <span class="t-flag">-n</span> <span class="t-val">trophic-prod</span>
+<span class="t-cmd">kubectl describe service</span> <span class="t-val">ingress-nginx-controller</span> <span class="t-flag">-n</span> <span class="t-val">ingress-nginx</span></pre>
+      <div class="cmd-body">
+        <div class="cmd-desc">Prints human-readable details including events, conditions, and annotations. For pods, the Events section shows why a pod is stuck (ImagePullBackOff, OOMKilled, etc.). For services, it shows the external IP/LoadBalancer ingress and <code>externalTrafficPolicy</code> setting.</div>
+      </div>
+    </div>
+
+    <div class="cmd-card">
+      <div class="cmd-header">
+        <div class="cmd-title">Stream pod logs</div>
+        <span class="badge badge-any">Any</span>
+      </div>
+      <pre><span class="t-cmd">kubectl logs</span> <span class="t-flag">-n</span> <span class="t-val">trophic-prod</span> \
+  <span class="t-flag">-l</span> <span class="t-str">"app.kubernetes.io/name=trophic-mission-control"</span> \
+  <span class="t-flag">--tail</span> <span class="t-val">100</span> <span class="t-flag">-f</span></pre>
+      <div class="cmd-body">
+        <div class="cmd-desc">Streams the last 100 lines of logs from all pods matching the label selector, then follows new output (<code>-f</code>). Used to inspect Next.js server logs after a health check failure.</div>
+        <table class="cmd-flags"><thead><tr><th>Flag</th><th>Purpose</th></tr></thead><tbody>
+          <tr><td>--tail N</td><td>Show only the last N lines (avoids flooding terminal on busy pods)</td></tr>
+          <tr><td>-f / --follow</td><td>Keep streaming new log lines until Ctrl-C</td></tr>
+          <tr><td>--previous</td><td>Show logs from the previous (crashed) container instance</td></tr>
+        </tbody></table>
+      </div>
+    </div>
+
+    <div class="cmd-card">
+      <div class="cmd-header">
+        <div class="cmd-title">Check rollout status</div>
+        <span class="badge badge-ci">CI</span>
+      </div>
+      <pre><span class="t-cmd">kubectl rollout status deployment</span> <span class="t-val">trophic-app</span> \
+  <span class="t-flag">-n</span> <span class="t-val">trophic-prod</span> \
+  <span class="t-flag">--timeout</span> <span class="t-val">300s</span></pre>
+      <div class="cmd-body">
+        <div class="cmd-desc">Blocks until the deployment's desired replicas are all Available and Ready, or until the timeout. Exit code 0 = healthy rollout, non-zero = timeout or error. Used as a post-deploy gate in CI.</div>
+      </div>
+    </div>
+  </section>
+
+  <hr class="divider" />
+
+  <!-- ── KUBECTL APPLY ── -->
+  <section id="kubectl-apply">
+    <div class="section-title">kubectl — Apply</div>
+    <div class="section-sub">Declarative resource creation and mutation.</div>
+
+    <div class="cmd-card">
+      <div class="cmd-header">
+        <div class="cmd-title">Create namespace if not exists</div>
+        <span class="badge badge-ci">CI</span>
+      </div>
+      <pre><span class="t-cmd">kubectl create namespace</span> <span class="t-val">trophic-prod</span> \
+  <span class="t-flag">--dry-run=client</span> <span class="t-flag">-o</span> <span class="t-val">yaml</span> | <span class="t-cmd">kubectl apply</span> <span class="t-flag">-f</span> <span class="t-val">-</span></pre>
+      <div class="cmd-body">
+        <div class="cmd-desc">Idempotent namespace creation. <code>kubectl create namespace</code> alone fails if the namespace already exists; the dry-run + apply pattern silently no-ops if it's already present.</div>
+      </div>
+    </div>
+
+    <div class="cmd-card">
+      <div class="cmd-header">
+        <div class="cmd-title">Apply a manifest from stdin</div>
+        <span class="badge badge-ci">CI</span>
+      </div>
+      <pre><span class="t-kw">cat</span> <span class="t-val">&lt;&lt;EOF | kubectl apply -f -</span>
+<span class="t-str">apiVersion: batch/v1
+kind: Job
+metadata:
+  name: prisma-migrate
+  namespace: trophic-prod
+spec:
+  template:
+    spec:
+      containers:
+      - name: migrate
+        image: trophictech.azurecr.io/mission-control:latest
+        command: ["npx","prisma","migrate","deploy"]</span>
+<span class="t-val">EOF</span></pre>
+      <div class="cmd-body">
+        <div class="cmd-desc">Pipes a YAML heredoc directly into <code>kubectl apply</code> without writing a temp file. Used to launch the Prisma migration Job dynamically with an image tag substituted at runtime.</div>
+      </div>
+    </div>
+
+    <div class="cmd-card">
+      <div class="cmd-header">
+        <div class="cmd-title">Patch a service (live fix)</div>
+        <span class="badge badge-local">Local</span>
+      </div>
+      <pre><span class="t-cmd">kubectl patch service</span> <span class="t-val">ingress-nginx-controller</span> \
+  <span class="t-flag">-n</span> <span class="t-val">ingress-nginx</span> \
+  <span class="t-flag">--type</span> <span class="t-val">merge</span> \
+  <span class="t-flag">-p</span> <span class="t-str">'{"spec":{"externalTrafficPolicy":"Local"}}'</span></pre>
+      <div class="cmd-body">
+        <div class="cmd-desc">Live-patches the NGINX ingress service to use <code>externalTrafficPolicy=Local</code>, which tells the Azure cloud controller to only route LB traffic to nodes actually running an ingress pod. Applied as an immediate fix while the Helm chart was updated for permanence.</div>
+        <table class="cmd-flags"><thead><tr><th>Flag</th><th>Purpose</th></tr></thead><tbody>
+          <tr><td>--type merge</td><td>Merge-patch strategy — shallow merge of the provided JSON with the existing spec</td></tr>
+          <tr><td>--type strategic</td><td>Strategic merge patch — smarter for lists and arrays</td></tr>
+          <tr><td>--type json</td><td>JSON patch (RFC 6902) — precise path-based mutations</td></tr>
+        </tbody></table>
+      </div>
+    </div>
+  </section>
+
+  <hr class="divider" />
+
+  <!-- ── KUBECTL EXEC ── -->
+  <section id="kubectl-exec">
+    <div class="section-title">kubectl — Exec</div>
+    <div class="section-sub">In-cluster command execution for smoke tests and health checks — independent of external networking.</div>
+
+    <div class="cmd-card">
+      <div class="cmd-header">
+        <div class="cmd-title">Wait for pod readiness</div>
+        <span class="badge badge-ci">CI</span>
+      </div>
+      <pre><span class="t-cmd">kubectl wait pod</span> <span class="t-flag">-n</span> <span class="t-var">$NS</span> \
+  <span class="t-flag">-l</span> <span class="t-str">"app.kubernetes.io/name=trophic-mission-control"</span> \
+  <span class="t-flag">--for</span> <span class="t-val">condition=Ready</span> \
+  <span class="t-flag">--timeout</span> <span class="t-val">180s</span></pre>
+      <div class="cmd-body">
+        <div class="cmd-desc">Blocks until all matched pods report <code>Ready=True</code>, then exits with code 0. Guarantees the pod is accepting connections before the exec health check runs — avoids a race where <code>kubectl exec</code> targets a pod that is starting up.</div>
+        <table class="cmd-flags"><thead><tr><th>Flag</th><th>Purpose</th></tr></thead><tbody>
+          <tr><td>--for condition=Ready</td><td>Wait for the Ready condition to become True</td></tr>
+          <tr><td>--timeout</td><td>Maximum wait time; exit code 1 if exceeded</td></tr>
+        </tbody></table>
+      </div>
+    </div>
+
+    <div class="cmd-card">
+      <div class="cmd-header">
+        <div class="cmd-title">In-pod health check (smoke test)</div>
+        <span class="badge badge-ci">CI</span>
+      </div>
+      <pre><span class="t-cmd">kubectl exec</span> <span class="t-flag">-n</span> <span class="t-var">$NS</span> <span class="t-var">$POD</span> <span class="t-flag">--</span> \
+  <span class="t-cmd">curl</span> <span class="t-flag">-sf</span> <span class="t-val">http://localhost:3000/api/health</span> \
+  | <span class="t-kw">grep</span> <span class="t-flag">-q</span> <span class="t-str">'"status":"ok"'</span></pre>
+      <div class="cmd-body">
+        <div class="cmd-desc">Runs <code>curl</code> inside the application container and checks the JSON response contains <code>"status":"ok"</code>. This approach replaced external <code>curl http://app.68.220.239.81.nip.io/api/health</code> — the external path was failing with exit code 28 (timeout) because NSG rules hadn't propagated yet. The in-pod approach bypasses load balancer, ingress, DNS, and NSG entirely.</div>
+        <table class="cmd-flags"><thead><tr><th>Flag / Part</th><th>Purpose</th></tr></thead><tbody>
+          <tr><td>--</td><td>Separator between kubectl flags and the command to run in the container</td></tr>
+          <tr><td>curl -s</td><td>Silent mode — suppress progress meter</td></tr>
+          <tr><td>curl -f</td><td>Fail with exit code 22 on HTTP 4xx/5xx responses</td></tr>
+          <tr><td>grep -q</td><td>Quiet grep — exit 0 if pattern found, exit 1 if not (no output)</td></tr>
+        </tbody></table>
+      </div>
+    </div>
+
+    <div class="cmd-card">
+      <div class="cmd-header">
+        <div class="cmd-title">Interactive shell in a pod</div>
+        <span class="badge badge-local">Local</span>
+      </div>
+      <pre><span class="t-cmd">kubectl exec</span> <span class="t-flag">-it</span> <span class="t-flag">-n</span> <span class="t-val">trophic-prod</span> <span class="t-val">trophic-app-7f9d-xkqv2</span> <span class="t-flag">--</span> <span class="t-val">sh</span></pre>
+      <div class="cmd-body">
+        <div class="cmd-desc">Opens an interactive shell session inside the running container for live debugging. Used to manually inspect the filesystem, run database queries, or test network connectivity from inside the cluster network.</div>
+        <table class="cmd-flags"><thead><tr><th>Flag</th><th>Purpose</th></tr></thead><tbody>
+          <tr><td>-i</td><td>Pass stdin through to the container</td></tr>
+          <tr><td>-t</td><td>Allocate a pseudo-TTY (needed for interactive shells)</td></tr>
+        </tbody></table>
+      </div>
+    </div>
+  </section>
+
+  <hr class="divider" />
+
+  <!-- ── KUBECTL JOBS ── -->
+  <section id="kubectl-jobs">
+    <div class="section-title">kubectl — Jobs</div>
+    <div class="section-sub">Managing the Kubernetes Batch Jobs that run Prisma migrations.</div>
+
+    <div class="cmd-card">
+      <div class="cmd-header">
+        <div class="cmd-title">Delete and re-create a Job (idempotent)</div>
+        <span class="badge badge-ci">CI</span>
+      </div>
+      <pre><span class="t-cmd">kubectl delete job</span> <span class="t-val">prisma-migrate</span> <span class="t-flag">-n</span> <span class="t-var">$NS</span> <span class="t-flag">--ignore-not-found</span>
+<span class="t-cmd">kubectl apply</span> <span class="t-flag">-f</span> <span class="t-val">migrate-job.yaml</span></pre>
+      <div class="cmd-body">
+        <div class="cmd-desc">Jobs are immutable once created — you can't re-apply a Job with the same name. Deleting first and re-creating is the standard pattern for repeatable CI steps. <code>--ignore-not-found</code> prevents failure on the first ever run when no prior Job exists.</div>
+        <table class="cmd-flags"><thead><tr><th>Flag</th><th>Purpose</th></tr></thead><tbody>
+          <tr><td>--ignore-not-found</td><td>Exit 0 even if the resource doesn't exist</td></tr>
+        </tbody></table>
+      </div>
+    </div>
+
+    <div class="cmd-card">
+      <div class="cmd-header">
+        <div class="cmd-title">Poll Job until complete</div>
+        <span class="badge badge-ci">CI</span>
+      </div>
+      <pre><span class="t-kw">for</span> i <span class="t-kw">in</span> $(seq 1 24); <span class="t-kw">do</span>
+  STATUS=$(<span class="t-cmd">kubectl get job</span> <span class="t-val">prisma-migrate</span> <span class="t-flag">-n</span> <span class="t-var">$NS</span> \
+    <span class="t-flag">-o</span> <span class="t-val">jsonpath='{.status.conditions[?(@.type=="Complete")].status}'</span>)
+  <span class="t-kw">if</span> [ <span class="t-str">"$STATUS"</span> = <span class="t-str">"True"</span> ]; <span class="t-kw">then</span>
+    <span class="t-kw">echo</span> <span class="t-str">"Migration complete"</span>; <span class="t-kw">break</span>
+  <span class="t-kw">fi</span>
+  <span class="t-kw">sleep</span> <span class="t-val">10</span>
+<span class="t-kw">done</span></pre>
+      <div class="cmd-body">
+        <div class="cmd-desc">Polls the Job's <code>Complete</code> condition every 10 seconds for up to 4 minutes. <code>kubectl wait --for=condition=complete</code> exists but can miss failures; the polling loop also checks for <code>Failed</code> conditions and streams pod logs on error.</div>
+      </div>
+    </div>
+
+    <div class="cmd-card">
+      <div class="cmd-header">
+        <div class="cmd-title">Stream migration Job logs</div>
+        <span class="badge badge-ci">CI</span>
+      </div>
+      <pre><span class="t-cmd">kubectl logs</span> <span class="t-flag">-n</span> <span class="t-var">$NS</span> <span class="t-flag">-l</span> <span class="t-str">"job-name=prisma-migrate"</span> <span class="t-flag">--follow</span></pre>
+      <div class="cmd-body">
+        <div class="cmd-desc">Follows log output from the migration Job's pod using the automatically-applied <code>job-name</code> label. Streams Prisma's output directly to the GitHub Actions run log so migration errors are visible inline.</div>
+      </div>
+    </div>
+  </section>
+
+  <hr class="divider" />
+
+  <!-- ── HELM ── -->
+  <section id="helm">
+    <div class="section-title">Helm</div>
+    <div class="section-sub">Kubernetes package manager used for application deployment, ingress setup, and rollbacks.</div>
+
+    <div class="cmd-card">
+      <div class="cmd-header">
+        <div class="cmd-title">Add a Helm chart repository</div>
+        <span class="badge badge-ci">CI</span>
+      </div>
+      <pre><span class="t-cmd">helm repo add</span> <span class="t-val">ingress-nginx</span> <span class="t-val">https://kubernetes.github.io/ingress-nginx</span>
+<span class="t-cmd">helm repo update</span></pre>
+      <div class="cmd-body">
+        <div class="cmd-desc">Registers the NGINX Ingress Controller chart repository and refreshes the local index. Run before every deploy so CI always has access to the latest chart version without maintaining a local cache.</div>
+      </div>
+    </div>
+
+    <div class="cmd-card">
+      <div class="cmd-header">
+        <div class="cmd-title">Install / upgrade nginx-ingress</div>
+        <span class="badge badge-ci">CI</span>
+      </div>
+      <pre><span class="t-cmd">helm upgrade</span> <span class="t-flag">--install</span> <span class="t-val">ingress-nginx ingress-nginx/ingress-nginx</span> \
+  <span class="t-flag">--namespace</span>   <span class="t-val">ingress-nginx</span> \
+  <span class="t-flag">--create-namespace</span> \
+  <span class="t-flag">--set</span> <span class="t-val">controller.service.externalTrafficPolicy=Local</span> \
+  <span class="t-flag">--wait</span></pre>
+      <div class="cmd-body">
+        <div class="cmd-desc">The idempotent ingress install. <code>--install</code> creates the release if it doesn't exist; otherwise upgrades it. <code>externalTrafficPolicy=Local</code> is the key setting — it restricts the Azure LB backend pool to only nodes running an ingress pod, eliminating the split-traffic NSG bug.</div>
+        <table class="cmd-flags"><thead><tr><th>Flag</th><th>Purpose</th></tr></thead><tbody>
+          <tr><td>--install</td><td>Install if the release doesn't exist (makes <code>upgrade</code> idempotent)</td></tr>
+          <tr><td>--create-namespace</td><td>Create the namespace if it doesn't exist</td></tr>
+          <tr><td>--set key=value</td><td>Override chart values inline</td></tr>
+          <tr><td>--wait</td><td>Block until all resources are Ready</td></tr>
+          <tr><td>--atomic</td><td>Roll back automatically if the upgrade fails (used for app deploys)</td></tr>
+        </tbody></table>
+      </div>
+    </div>
+
+    <div class="cmd-card">
+      <div class="cmd-header">
+        <div class="cmd-title">Deploy application with Helm</div>
+        <span class="badge badge-ci">CI</span>
+      </div>
+      <pre><span class="t-cmd">helm upgrade</span> <span class="t-flag">--install</span> <span class="t-var">${{ env.HELM_RELEASE }}</span> <span class="t-val">./helm/trophic-app</span> \
+  <span class="t-flag">--namespace</span>     <span class="t-var">${{ env.PROD_NAMESPACE }}</span> \
+  <span class="t-flag">--set</span>           <span class="t-val">image.tag=</span><span class="t-var">${{ env.IMAGE_TAG }}</span> \
+  <span class="t-flag">--set</span>           <span class="t-val">replicaCount=3</span> \
+  <span class="t-flag">--atomic</span> \
+  <span class="t-flag">--timeout</span>       <span class="t-val">10m</span></pre>
+      <div class="cmd-body">
+        <div class="cmd-desc">Deploys (or upgrades) the application Helm chart with a specific image tag and replica count. <code>--atomic</code> triggers an automatic rollback to the last successful release if the upgrade fails within the timeout window.</div>
+      </div>
+    </div>
+
+    <div class="cmd-card">
+      <div class="cmd-header">
+        <div class="cmd-title">Canary deployment (20% traffic)</div>
+        <span class="badge badge-ci">CI</span>
+      </div>
+      <pre><span class="t-cmd">helm upgrade</span> <span class="t-flag">--install</span> <span class="t-val">trophic-canary ./helm/trophic-app</span> \
+  <span class="t-flag">--namespace</span>  <span class="t-var">${{ env.PROD_NAMESPACE }}</span> \
+  <span class="t-flag">--set</span>        <span class="t-val">image.tag=</span><span class="t-var">${{ env.IMAGE_TAG }}</span> \
+  <span class="t-flag">--set</span>        <span class="t-val">replicaCount=1</span> \
+  <span class="t-flag">--set</span>        <span class="t-val">ingress.annotations."nginx\.ingress\.kubernetes\.io/canary"=true</span> \
+  <span class="t-flag">--set</span>        <span class="t-val">ingress.annotations."nginx\.ingress\.kubernetes\.io/canary-weight"=20</span> \
+  <span class="t-flag">--atomic</span> <span class="t-flag">--timeout</span> <span class="t-val">5m</span></pre>
+      <div class="cmd-body">
+        <div class="cmd-desc">Deploys a 1-replica canary release with NGINX's canary-weight annotation set to 20 — NGINX Ingress routes 20% of production traffic to the canary pod. After a 30-second soak, the CI workflow checks canary pod health before proceeding to the full rollout.</div>
+      </div>
+    </div>
+
+    <div class="cmd-card">
+      <div class="cmd-header">
+        <div class="cmd-title">Uninstall a Helm release</div>
+        <span class="badge badge-ci">CI</span>
+      </div>
+      <pre><span class="t-cmd">helm uninstall</span> <span class="t-val">trophic-canary</span> <span class="t-flag">--namespace</span> <span class="t-var">${{ env.PROD_NAMESPACE }}</span></pre>
+      <div class="cmd-body">
+        <div class="cmd-desc">Removes the canary release and all its Kubernetes resources after the full production rollout succeeds. Keeps the cluster clean between deployments.</div>
+      </div>
+    </div>
+
+    <div class="cmd-card">
+      <div class="cmd-header">
+        <div class="cmd-title">List installed releases</div>
+        <span class="badge badge-any">Any</span>
+      </div>
+      <pre><span class="t-cmd">helm list</span> <span class="t-flag">--all-namespaces</span></pre>
+      <div class="cmd-body">
+        <div class="cmd-desc">Shows all Helm releases across all namespaces with their chart version, app version, and status. Quick overview of what's deployed in the cluster.</div>
+      </div>
+    </div>
+  </section>
+
+  <hr class="divider" />
+
+  <!-- ── DOCKER ── -->
+  <section id="docker">
+    <div class="section-title">Docker</div>
+    <div class="section-sub">Multi-stage image build, tagging, and pushing to Azure Container Registry.</div>
+
+    <div class="cmd-card">
+      <div class="cmd-header">
+        <div class="cmd-title">Build with BuildKit and cache</div>
+        <span class="badge badge-ci">CI</span>
+      </div>
+      <pre><span class="t-cmd">docker buildx build</span> \
+  <span class="t-flag">--platform</span>   <span class="t-val">linux/amd64</span> \
+  <span class="t-flag">--tag</span>        <span class="t-var">${{ secrets.ACR_REGISTRY }}</span>/<span class="t-var">${{ secrets.ACR_REPOSITORY }}</span>:<span class="t-var">${{ env.IMAGE_TAG }}</span> \
+  <span class="t-flag">--cache-from</span> <span class="t-val">type=registry,ref=</span><span class="t-var">${{ secrets.ACR_REGISTRY }}</span>/<span class="t-var">${{ secrets.ACR_REPOSITORY }}</span>:<span class="t-val">buildcache</span> \
+  <span class="t-flag">--cache-to</span>   <span class="t-val">type=registry,ref=</span><span class="t-var">${{ secrets.ACR_REGISTRY }}</span>/<span class="t-var">${{ secrets.ACR_REPOSITORY }}</span>:<span class="t-val">buildcache,mode=max</span> \
+  <span class="t-flag">--push</span>       <span class="t-val">.</span></pre>
+      <div class="cmd-body">
+        <div class="cmd-desc">Builds a multi-stage Docker image for <code>linux/amd64</code> using BuildKit's registry cache. Layer caches are read from and written back to ACR under the <code>:buildcache</code> tag — keeps CI build times under 3 minutes even on cold runners.</div>
+        <table class="cmd-flags"><thead><tr><th>Flag</th><th>Purpose</th></tr></thead><tbody>
+          <tr><td>--platform linux/amd64</td><td>Force AMD64 architecture (AKS node pools are AMD64)</td></tr>
+          <tr><td>--cache-from</td><td>Pull layer cache from a remote registry before building</td></tr>
+          <tr><td>--cache-to mode=max</td><td>Push all layers (not just final stage) to the cache tag</td></tr>
+          <tr><td>--push</td><td>Push the built image to the registry without a separate <code>docker push</code></td></tr>
+        </tbody></table>
+      </div>
+    </div>
+
+    <div class="cmd-card">
+      <div class="cmd-header">
+        <div class="cmd-title">Pull and run image locally</div>
+        <span class="badge badge-local">Local</span>
+      </div>
+      <pre><span class="t-cmd">docker run</span> <span class="t-flag">--rm</span> <span class="t-flag">-p</span> <span class="t-val">3000:3000</span> \
+  <span class="t-flag">-e</span> <span class="t-val">DATABASE_URL=postgresql://...</span> \
+  <span class="t-val">trophictech.azurecr.io/mission-control:latest</span></pre>
+      <div class="cmd-body">
+        <div class="cmd-desc">Runs the production image locally for quick smoke testing before pushing. <code>--rm</code> deletes the container on exit. Environment variables are injected with <code>-e</code> flags.</div>
+      </div>
+    </div>
+  </section>
+
+  <hr class="divider" />
+
+  <!-- ── CURL ── -->
+  <section id="curl">
+    <div class="section-title">curl</div>
+    <div class="section-sub">HTTP testing from local and inside containers.</div>
+
+    <div class="cmd-card">
+      <div class="cmd-header">
+        <div class="cmd-title">Test external endpoint</div>
+        <span class="badge badge-local">Local</span>
+      </div>
+      <pre><span class="t-cmd">curl</span> <span class="t-flag">-I</span> <span class="t-val">http://app.68.220.239.81.nip.io</span></pre>
+      <div class="cmd-body">
+        <div class="cmd-desc">Fetches only the response headers (<code>-I</code> = HEAD request). Returns HTTP status code and server headers without downloading the body — quick way to verify the ingress is routing requests correctly after a deploy.</div>
+        <table class="cmd-flags"><thead><tr><th>Flag</th><th>Purpose</th></tr></thead><tbody>
+          <tr><td>-I</td><td>Send HEAD request — headers only, no body</td></tr>
+          <tr><td>-s</td><td>Silent — suppress progress and error messages</td></tr>
+          <tr><td>-f</td><td>Fail silently on HTTP errors (returns exit code 22)</td></tr>
+          <tr><td>--max-time N</td><td>Maximum time for the entire operation in seconds</td></tr>
+          <tr><td>--retry N</td><td>Retry up to N times on transient failures</td></tr>
+        </tbody></table>
+      </div>
+    </div>
+
+    <div class="cmd-card">
+      <div class="cmd-header">
+        <div class="cmd-title">Health check with JSON grep (in-pod)</div>
+        <span class="badge badge-ci">CI</span>
+      </div>
+      <pre><span class="t-cmd">curl</span> <span class="t-flag">-sf</span> <span class="t-val">http://localhost:3000/api/health</span> | <span class="t-kw">grep</span> <span class="t-flag">-q</span> <span class="t-str">'"status":"ok"'</span></pre>
+      <div class="cmd-body">
+        <div class="cmd-desc">The in-pod health check used by both staging smoke tests and production health checks. Runs inside the container via <code>kubectl exec</code> so it tests only the Next.js API handler — no load balancer, ingress, DNS, or NSG involved. Replaced the unreliable external curl that was returning exit code 28.</div>
+      </div>
+    </div>
+  </section>
+
+  <hr class="divider" />
+
+  <!-- ── TERRAFORM ── -->
+  <section id="terraform">
+    <div class="section-title">Terraform</div>
+    <div class="section-sub">Infrastructure-as-Code for provisioning the Azure resources underpinning the platform.</div>
+
+    <div class="cmd-card">
+      <div class="cmd-header">
+        <div class="cmd-title">Initialise working directory</div>
+        <span class="badge badge-local">Local</span>
+      </div>
+      <pre><span class="t-cmd">terraform init</span> \
+  <span class="t-flag">-backend-config</span>=<span class="t-str">"storage_account_name=trophictfstate"</span> \
+  <span class="t-flag">-backend-config</span>=<span class="t-str">"container_name=tfstate"</span> \
+  <span class="t-flag">-backend-config</span>=<span class="t-str">"key=prod.terraform.tfstate"</span></pre>
+      <div class="cmd-body">
+        <div class="cmd-desc">Downloads provider plugins and configures the Azure Blob Storage backend for remote state. Remote state ensures multiple team members share the same lock and state file — prevents concurrent applies from conflicting.</div>
+        <table class="cmd-flags"><thead><tr><th>Flag</th><th>Purpose</th></tr></thead><tbody>
+          <tr><td>-backend-config</td><td>Inject backend configuration at init time (avoids hardcoding in .tf files)</td></tr>
+          <tr><td>-upgrade</td><td>Upgrade provider plugins to latest allowed version</td></tr>
+          <tr><td>-reconfigure</td><td>Reconfigure backend without migrating existing state</td></tr>
+        </tbody></table>
+      </div>
+    </div>
+
+    <div class="cmd-card">
+      <div class="cmd-header">
+        <div class="cmd-title">Preview changes</div>
+        <span class="badge badge-local">Local</span>
+      </div>
+      <pre><span class="t-cmd">terraform plan</span> <span class="t-flag">-out</span>=<span class="t-val">tfplan</span> <span class="t-flag">-var-file</span>=<span class="t-val">prod.tfvars</span></pre>
+      <div class="cmd-body">
+        <div class="cmd-desc">Compares desired state (HCL files) with actual Azure resource state and outputs a diff. Saving to <code>-out=tfplan</code> creates a plan file that <code>terraform apply tfplan</code> can execute exactly — no re-plan, no drift.</div>
+        <table class="cmd-flags"><thead><tr><th>Flag</th><th>Purpose</th></tr></thead><tbody>
+          <tr><td>-out</td><td>Save the plan to a file for deterministic apply</td></tr>
+          <tr><td>-var-file</td><td>Load variable values from a <code>.tfvars</code> file</td></tr>
+          <tr><td>-target</td><td>Limit plan to a specific resource (use sparingly)</td></tr>
+        </tbody></table>
+      </div>
+    </div>
+
+    <div class="cmd-card">
+      <div class="cmd-header">
+        <div class="cmd-title">Apply infrastructure changes</div>
+        <span class="badge badge-local">Local</span>
+      </div>
+      <pre><span class="t-cmd">terraform apply</span> <span class="t-val">tfplan</span></pre>
+      <div class="cmd-body">
+        <div class="cmd-desc">Executes the saved plan against Azure. Applying a pre-built plan file skips the approval prompt and guarantees exactly what was reviewed gets applied — required for automated pipelines and audit trails.</div>
+      </div>
+    </div>
+
+    <div class="cmd-card">
+      <div class="cmd-header">
+        <div class="cmd-title">Show current state</div>
+        <span class="badge badge-local">Local</span>
+      </div>
+      <pre><span class="t-cmd">terraform show</span> <span class="t-flag">-json</span> | <span class="t-kw">jq</span> <span class="t-str">'.values.root_module.resources[].address'</span></pre>
+      <div class="cmd-body">
+        <div class="cmd-desc">Dumps the full Terraform state as JSON and pipes to <code>jq</code> to list all tracked resource addresses. Used to audit what Terraform currently manages — handy when debugging drift or importing existing resources.</div>
+      </div>
+    </div>
+
+    <div class="cmd-card">
+      <div class="cmd-header">
+        <div class="cmd-title">Import existing resource into state</div>
+        <span class="badge badge-local">Local</span>
+      </div>
+      <pre><span class="t-cmd">terraform import</span> \
+  <span class="t-val">module.aks.azurerm_kubernetes_cluster.main</span> \
+  <span class="t-val">/subscriptions/&lt;sub-id&gt;/resourceGroups/trophic-prod-rg/providers/Microsoft.ContainerService/managedClusters/trophic-aks</span></pre>
+      <div class="cmd-body">
+        <div class="cmd-desc">Brings an existing Azure resource under Terraform management without recreating it. Used when the AKS cluster was provisioned manually first and later adopted into IaC.</div>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<script>
+  // Scrollspy: highlight the active nav link based on scroll position
+  const sections = document.querySelectorAll('section[id]');
+  const links = document.querySelectorAll('nav a');
+
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+      if (entry.isIntersecting) {
+        links.forEach(l => l.classList.remove('active'));
+        const active = document.querySelector(`nav a[href="#${entry.target.id}"]`);
+        if (active) active.classList.add('active');
+      }
+    });
+  }, { rootMargin: '-20% 0px -70% 0px' });
+
+  sections.forEach(s => observer.observe(s));
+</script>
+</body>
+</html>
